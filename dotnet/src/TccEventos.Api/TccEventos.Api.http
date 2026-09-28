@@ -1,0 +1,75 @@
+@api = http://localhost:5013
+@keycloak = http://localhost:8081/realms/tcc/protocol/openid-connect/token
+
+### 0. Token de TMS (client credentials contra Keycloak local; vence en 5 min)
+# @name tokenTms
+POST {{keycloak}}
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&client_id=tms&client_secret=tms-secreto-solo-local
+
+### 1. Evento válido → 202 (repetirlo → 200 DUPLICADO)
+POST {{api}}/api/v1/eventos-guia
+Authorization: Bearer {{tokenTms.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "idEvento": "0199a1b2-7c3d-7e4f-8a9b-0c1d2e3f4a5b",
+  "numeroGuia": "TCC123456789",
+  "estado": "EN_REPARTO",
+  "ocurridoEn": "2026-09-26T10:15:00-05:00",
+  "origen": "TMS",
+  "novedad": null
+}
+
+### 2. Contrato inválido → 400 con todos los errores
+POST {{api}}/api/v1/eventos-guia
+Authorization: Bearer {{tokenTms.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "idEvento": "00000000-0000-0000-0000-000000000000",
+  "numeroGuia": "TCC-1",
+  "estado": "PERDIDA",
+  "origen": "TMS"
+}
+
+### 3. JSON mal formado → 400 (no 500)
+POST {{api}}/api/v1/eventos-guia
+Authorization: Bearer {{tokenTms.response.body.$.access_token}}
+Content-Type: application/json
+
+{ "idEvento":
+
+### 4. TMS reportando un evento de TRANSPORTE → 403 (suplantación)
+POST {{api}}/api/v1/eventos-guia
+Authorization: Bearer {{tokenTms.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "idEvento": "0199a1b2-7c3d-7e4f-8a9b-0c1d2e3f4a5c",
+  "numeroGuia": "TCC123456789",
+  "estado": "ENTREGADA",
+  "ocurridoEn": "2026-09-26T11:00:00-05:00",
+  "origen": "TRANSPORTE"
+}
+
+### 5. Sin token → 401
+POST {{api}}/api/v1/eventos-guia
+Content-Type: application/json
+
+{}
+
+### 6. Sondas (sin token)
+GET {{api}}/salud/lista
+
+### 7. Token del portal de rastreo (solo guias:leer)
+# @name tokenPortal
+POST {{keycloak}}
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&client_id=portal-consulta&client_secret=portal-secreto-solo-local
+
+### 8. Estado e historial de la guía (tras el 202 del paso 1, en pocos segundos)
+GET {{api}}/api/v1/guias/TCC123456789
+Authorization: Bearer {{tokenPortal.response.body.$.access_token}}

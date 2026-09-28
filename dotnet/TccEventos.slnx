@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TccEventos.Api/TccEventos.Api.csproj" />
+    <Project Path="src/TccEventos.Aplicacion/TccEventos.Aplicacion.csproj" />
+    <Project Path="src/TccEventos.Contratos/TccEventos.Contratos.csproj" />
+    <Project Path="src/TccEventos.Dominio/TccEventos.Dominio.csproj" />
+    <Project Path="src/TccEventos.Infraestructura/TccEventos.Infraestructura.csproj" />
+    <Project Path="src/TccEventos.Notificador/TccEventos.Notificador.csproj" />
+    <Project Path="src/TccEventos.Procesador/TccEventos.Procesador.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TccEventos.Api.PruebasIntegracion/TccEventos.Api.PruebasIntegracion.csproj" />
+    <Project Path="tests/TccEventos.Aplicacion.Pruebas/TccEventos.Aplicacion.Pruebas.csproj" />
+    <Project Path="tests/TccEventos.Arquitectura.Pruebas/TccEventos.Arquitectura.Pruebas.csproj" />
+    <Project Path="tests/TccEventos.Dominio.Pruebas/TccEventos.Dominio.Pruebas.csproj" />
+    <Project Path="tests/TccEventos.Notificador.Pruebas/TccEventos.Notificador.Pruebas.csproj" />
+    <Project Path="tests/TccEventos.Procesador.PruebasIntegracion/TccEventos.Procesador.PruebasIntegracion.csproj" />
+  </Folder>
+</Solution>

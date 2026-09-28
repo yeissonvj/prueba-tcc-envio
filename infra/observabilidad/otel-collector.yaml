@@ -1,0 +1,42 @@
+# OpenTelemetry Collector: las apps solo conocen OTLP; aquí se decide a qué backend va cada señal.
+# Cambiar Jaeger por Tempo o Prometheus por otro sistema es configuración, no código.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+  batch: {}
+
+exporters:
+  otlp_grpc/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+  otlp_http/loki:
+    endpoint: http://loki:3100/otlp   # Loki 3 recibe OTLP nativo: trace_id y severidad quedan como metadatos
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_constant_labels:
+      include: [service.name, service.instance.id]   # qué servicio e instancia reportó cada serie
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_grpc/jaeger]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/loki]

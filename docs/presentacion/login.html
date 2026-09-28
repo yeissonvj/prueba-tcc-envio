@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acceso · Prueba técnica TCC</title>
+<script src="acceso.js"></script>
+<script src="sesion.js"></script>
+<script>
+  // Con sesión vigente no hace falta volver a entrar.
+  if (TCC.leer()) location.replace(new URLSearchParams(location.search).get('volver') || 'index.html');
+</script>
+<style>
+  @property --giro { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+  :root {
+    --fondo: #060a10; --texto: #e6edf5; --tenue: #8a9bb0; --azul: #4ea1ff; --naranja: #ff9f43; --verde: #3ddc97;
+    --morado: #b388ff; --rojo: #ff6b6b; --amarillo: #ffd166; --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--fondo); color: var(--texto); font: 15px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+
+  /* ---- fondo: auroras + red de eventos ---- */
+  .aurora { position: fixed; inset: -20%; z-index: 0; filter: blur(80px); opacity: .55; pointer-events: none; }
+  .aurora span { position: absolute; width: 42vmax; height: 42vmax; border-radius: 50%; mix-blend-mode: screen; animation: flotar 22s ease-in-out infinite alternate; }
+  .aurora span:nth-child(1) { background: #1d4f91; left: 5%; top: 10%; }
+  .aurora span:nth-child(2) { background: #5b2a86; right: 0; top: 30%; animation-duration: 28s; animation-delay: -6s; }
+  .aurora span:nth-child(3) { background: #0f6b4f; left: 30%; bottom: -5%; animation-duration: 25s; animation-delay: -12s; }
+  @keyframes flotar { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(6vmax, -4vmax) scale(1.15); } 100% { transform: translate(-5vmax, 5vmax) scale(.9); } }
+  canvas { position: fixed; inset: 0; z-index: 1; }
+  .rejilla { position: fixed; inset: 0; z-index: 1; pointer-events: none;
+             background-image: linear-gradient(rgba(78,161,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(78,161,255,.05) 1px, transparent 1px);
+             background-size: 48px 48px; mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%); -webkit-mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%); }
+
+  /* ---- tarjeta ---- */
+  main { position: relative; z-index: 2; height: 100%; display: grid; place-items: center; padding: 20px; }
+  .tarjeta { position: relative; width: min(420px, 100%); border-radius: 22px; padding: 34px 32px 26px;
+             background: linear-gradient(160deg, rgba(20,30,42,.78), rgba(10,15,22,.86)); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+             box-shadow: 0 30px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+             animation: entrar .9s cubic-bezier(.2,.8,.2,1) both; }
+  .tarjeta::before { content: ""; position: absolute; inset: -1.5px; border-radius: 23px; z-index: -1; padding: 1.5px;
+                     background: conic-gradient(from var(--giro), transparent 0deg, var(--azul) 60deg, var(--morado) 120deg, transparent 180deg, var(--verde) 260deg, transparent 320deg);
+                     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+                     animation: girar 6s linear infinite; }
+  @keyframes girar { to { --giro: 360deg; } }
+  @keyframes entrar { from { opacity: 0; transform: translateY(24px) scale(.97); } to { opacity: 1; transform: none; } }
+  .tarjeta.error { animation: sacudir .45s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes sacudir { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-8px); } 40%, 60% { transform: translateX(8px); } }
+  .tarjeta.exito { animation: salir .8s .5s cubic-bezier(.6,0,.4,1) forwards; }
+  @keyframes salir { to { opacity: 0; transform: translateY(-16px) scale(1.03); filter: blur(4px); } }
+
+  .marca { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+  .logo { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; flex: none;
+          background: linear-gradient(135deg, #10243a, #241b38); border: 1px solid #2c3d50; box-shadow: 0 0 24px rgba(78,161,255,.25); }
+  .logo svg { animation: latir 3s ease-in-out infinite; }
+  @keyframes latir { 50% { transform: scale(1.08); filter: drop-shadow(0 0 6px rgba(78,161,255,.7)); } }
+  .marca small { display: block; font-family: var(--mono); font-size: 11.5px; letter-spacing: .12em; color: var(--azul); }
+  .marca h1 { margin: 2px 0 0; font-size: 19px; line-height: 1.25; font-weight: 700;
+              background: linear-gradient(90deg, #fff, #b9d6ff 60%, #d9c4ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .bienvenida { color: var(--tenue); margin: 0 0 22px; font-size: 14px; }
+
+  /* ---- campos con etiqueta flotante ---- */
+  .campo { position: relative; margin-bottom: 16px; }
+  .campo input { width: 100%; font: inherit; font-size: 15px; color: var(--texto); background: rgba(8,12,18,.7);
+                 border: 1px solid #253547; border-radius: 12px; padding: 22px 44px 8px 42px; outline: none; transition: border-color .2s, box-shadow .2s, background .2s; }
+  .campo input:focus { border-color: var(--azul); box-shadow: 0 0 0 4px rgba(78,161,255,.15); background: rgba(8,12,18,.9); }
+  .campo label { position: absolute; left: 42px; top: 15px; color: var(--tenue); pointer-events: none; transition: all .18s ease; }
+  .campo input:focus + label, .campo input:not(:placeholder-shown) + label { top: 6px; font-size: 11.5px; color: var(--azul); letter-spacing: .03em; }
+  .campo .icono { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #5d7189; transition: color .2s; }
+  .campo input:focus ~ .icono { color: var(--azul); }
+  .ver { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: 0; color: #5d7189; cursor: pointer; padding: 6px; border-radius: 8px; }
+  .ver:hover { color: var(--texto); background: rgba(255,255,255,.05); }
+  .tarjeta.error .campo input { border-color: var(--rojo); }
+
+  .mayus { display: none; font-size: 12.5px; color: var(--amarillo); margin: -8px 0 12px 4px; }
+  .mensaje { min-height: 20px; font-size: 13.5px; color: var(--rojo); margin: 0 0 12px 2px; }
+  .mensaje.aviso { color: var(--amarillo); }
+
+  /* ---- botón ---- */
+  .entrar { position: relative; width: 100%; font: inherit; font-size: 15.5px; font-weight: 700; letter-spacing: .02em; color: #fff; cursor: pointer;
+            border: 0; border-radius: 12px; padding: 13px; overflow: hidden;
+            background: linear-gradient(135deg, #2f7de0, #6d4fd8 55%, #2fb98a); background-size: 200% 200%; animation: fluir 6s ease infinite;
+            box-shadow: 0 10px 28px rgba(64,112,230,.35); transition: transform .15s, box-shadow .2s, filter .2s; }
+  @keyframes fluir { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  .entrar:hover { transform: translateY(-1px); box-shadow: 0 14px 34px rgba(64,112,230,.5); }
+  .entrar:active { transform: translateY(1px); }
+  .entrar::after { content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+                   background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent); transform: skewX(-20deg); animation: brillo 3.5s ease-in-out infinite; }
+  @keyframes brillo { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+  .entrar:disabled { cursor: wait; filter: saturate(.7); }
+  .entrar .giro { display: none; width: 16px; height: 16px; margin-right: 8px; vertical-align: -3px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: rotar .7s linear infinite; }
+  .entrar.cargando .giro { display: inline-block; }
+  @keyframes rotar { to { transform: rotate(360deg); } }
+  .entrar.ok { background: linear-gradient(135deg, #1f9d6f, #3ddc97); }
+
+  .pie { margin-top: 18px; text-align: center; color: #5d7189; font-size: 12.5px; }
+  .pie b { color: var(--tenue); font-weight: 500; }
+  .chips { display: flex; justify-content: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .chips span { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; border: 1px solid #253547; color: #6f829a; }
+  .chips span i { font-style: normal; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+<canvas id="red" aria-hidden="true"></canvas>
+<div class="rejilla" aria-hidden="true"></div>
+
+<main>
+  <form class="tarjeta" id="formulario" autocomplete="on" novalidate>
+    <div class="marca">
+      <div class="logo" aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 30 30">
+          <circle cx="6" cy="15" r="4" fill="#4ea1ff"/><circle cx="24" cy="7" r="3.5" fill="#ff9f43"/><circle cx="24" cy="23" r="3.5" fill="#3ddc97"/>
+          <path d="M10 13.5 L20.5 8 M10 16.5 L20.5 22" stroke="#b388ff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <small>PRUEBA TÉCNICA · TCC</small>
+        <h1>Plataforma de eventos de guías</h1>
+      </div>
+    </div>
+    <p class="bienvenida">Bienvenido. Ingresa con las credenciales que recibiste para ver la presentación.</p>
+
+    <div class="campo">
+      <input id="usuario" name="username" type="text" placeholder=" " autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      <label for="usuario">Usuario</label>
+      <svg class="icono" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+    </div>
+    <div class="campo">
+      <input id="clave" name="password" type="password" placeholder=" " autocomplete="current-password" required>
+      <label for="clave">Contraseña</label>
+      <svg class="icono" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <button class="ver" type="button" id="ver" aria-label="Mostrar contraseña">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <p class="mayus" id="mayus">⇪ Bloq Mayús está activado</p>
+    <p class="mensaje" id="mensaje" role="alert"></p>
+
+    <button class="entrar" id="entrar" type="submit"><span class="giro"></span><span id="textoBoton">Entrar</span></button>
+
+    <div class="chips" aria-hidden="true">
+      <span><i style="background:#4ea1ff"></i>Arquitectura</span>
+      <span><i style="background:#3ddc97"></i>Desarrollo y calidad</span>
+      <span><i style="background:#b388ff"></i>Liderazgo</span>
+    </div>
+    <p class="pie">Acceso con las credenciales enviadas junto con la invitación a la <b>sustentación</b>.</p>
+  </form>
+</main>
+
+<script>
+  // ---------------- inicio de sesión ----------------
+  const $ = (id) => document.getElementById(id);
+  const formulario = $('formulario'), boton = $('entrar'), mensaje = $('mensaje');
+  const volver = new URLSearchParams(location.search).get('volver');
+  const destino = volver && /^[\w.-]+\.html(#[\w-]*)?$/.test(volver) ? volver : 'index.html'; // solo páginas propias
+
+  if (!TCC.configurado()) {
+    mensaje.className = 'mensaje aviso';
+    mensaje.textContent = 'Aún no hay cuentas configuradas (herramientas/credenciales-presentacion.py).';
+  }
+
+  $('ver').addEventListener('click', () => {
+    const c = $('clave');
+    c.type = c.type === 'password' ? 'text' : 'password';
+    $('ver').setAttribute('aria-label', c.type === 'password' ? 'Mostrar contraseña' : 'Ocultar contraseña');
+    c.focus();
+  });
+  ['keydown', 'keyup'].forEach((t) => $('clave').addEventListener(t, (e) => {
+    if (e.getModifierState) $('mayus').style.display = e.getModifierState('CapsLock') ? 'block' : 'none';
+  }));
+
+  formulario.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const usuario = $('usuario').value, clave = $('clave').value;
+    if (!usuario.trim() || !clave) { fallar('Escribe tu usuario y tu contraseña.'); return; }
+    boton.disabled = true; boton.classList.add('cargando'); $('textoBoton').textContent = 'Verificando…'; mensaje.textContent = '';
+    let sesion = null;
+    try { sesion = await TCC.verificar(usuario, clave); } catch { fallar('Este navegador no permite verificar el acceso.'); return; }
+    if (!sesion) { await new Promise((r) => setTimeout(r, 350)); fallar('Usuario o contraseña incorrectos.'); return; }
+    boton.classList.remove('cargando'); boton.classList.add('ok');
+    $('textoBoton').textContent = sesion.rol === 'admin' ? '✓ Bienvenido, administrador' : '✓ Bienvenido';
+    red.celebrar();
+    formulario.classList.add('exito');
+    setTimeout(() => location.replace(destino), 1250);
+  });
+
+  function fallar(texto) {
+    boton.disabled = false; boton.classList.remove('cargando'); $('textoBoton').textContent = 'Entrar';
+    mensaje.className = 'mensaje'; mensaje.textContent = texto;
+    formulario.classList.remove('error'); void formulario.offsetWidth; formulario.classList.add('error');
+    $('clave').select();
+  }
+  $('usuario').focus();
+
+  // ---------------- fondo: red de eventos en movimiento ----------------
+  const red = (() => {
+    const lienzo = $('red'), ctx = lienzo.getContext('2d');
+    const colores = ['#4ea1ff', '#ff9f43', '#3ddc97', '#b388ff'];
+    const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let ancho, alto, nodos = [], pulsos = [], raton = { x: -1e4, y: -1e4 }, fiesta = 0;
+
+    function medir() {
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      ancho = innerWidth; alto = innerHeight;
+      lienzo.width = ancho * dpr; lienzo.height = alto * dpr; lienzo.style.width = ancho + 'px'; lienzo.style.height = alto + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const cantidad = Math.round(Math.min(90, (ancho * alto) / 16000));
+      nodos = Array.from({ length: cantidad }, () => ({
+        x: Math.random() * ancho, y: Math.random() * alto,
+        vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35, r: 1.2 + Math.random() * 1.8,
+      }));
+    }
+
+    function vecinos(n) {
+      return nodos.filter((m) => m !== n && Math.hypot(m.x - n.x, m.y - n.y) < 150);
+    }
+
+    function lanzarPulso() {
+      const origen = nodos[Math.floor(Math.random() * nodos.length)];
+      const opciones = vecinos(origen);
+      if (!opciones.length) return;
+      pulsos.push({ a: origen, b: opciones[Math.floor(Math.random() * opciones.length)], t: 0,
+                    v: .012 + Math.random() * .02, color: colores[Math.floor(Math.random() * colores.length)], saltos: 2 + Math.floor(Math.random() * 4) });
+    }
+
+    function cuadro() {
+      ctx.clearRect(0, 0, ancho, alto);
+      for (const n of nodos) {
+        if (!quieto) { n.x += n.vx; n.y += n.vy; }
+        if (n.x < 0 || n.x > ancho) n.vx *= -1;
+        if (n.y < 0 || n.y > alto) n.vy *= -1;
+        const d = Math.hypot(n.x - raton.x, n.y - raton.y);
+        if (d < 120) { n.x += (n.x - raton.x) / d * .8; n.y += (n.y - raton.y) / d * .8; } // se apartan del cursor
+      }
+      for (let i = 0; i < nodos.length; i++) {
+        for (let j = i + 1; j < nodos.length; j++) {
+          const a = nodos[i], b = nodos[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+          if (d < 150) {
+            ctx.strokeStyle = `rgba(110,150,210,${(1 - d / 150) * .22})`;
+            ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+          }
+        }
+      }
+      for (const n of nodos) { ctx.fillStyle = 'rgba(170,200,240,.55)'; ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 7); ctx.fill(); }
+
+      // eventos viajando de nodo en nodo, con estela
+      if (!quieto && Math.random() < (fiesta > 0 ? .9 : .12)) lanzarPulso();
+      pulsos = pulsos.filter((p) => {
+        p.t += p.v * (fiesta > 0 ? 2.2 : 1);
+        if (p.t >= 1) {
+          if (--p.saltos <= 0) return false;
+          const siguiente = vecinos(p.b);
+          if (!siguiente.length) return false;
+          p.a = p.b; p.b = siguiente[Math.floor(Math.random() * siguiente.length)]; p.t = 0;
+        }
+        const x = p.a.x + (p.b.x - p.a.x) * p.t, y = p.a.y + (p.b.y - p.a.y) * p.t;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, 12);
+        g.addColorStop(0, p.color); g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 12, 0, 7); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 1.8, 0, 7); ctx.fill();
+        return true;
+      });
+      if (fiesta > 0) fiesta--;
+      requestAnimationFrame(cuadro);
+    }
+
+    addEventListener('resize', medir);
+    addEventListener('pointermove', (e) => { raton = { x: e.clientX, y: e.clientY }; });
+    addEventListener('pointerleave', () => { raton = { x: -1e4, y: -1e4 }; });
+    medir(); cuadro();
+    return { celebrar: () => { fiesta = 90; } };
+  })();
+</script>
+</body>
+</html>

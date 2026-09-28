@@ -1,0 +1,42 @@
+# Alertas alineadas con los SLO de la Fase 0. Severidad "pagina" despierta a la guardia; "ticket" no.
+groups:
+  - name: slo-plataforma-eventos
+    rules:
+      - alert: EstadoVisibleLentoP95
+        expr: histogram_quantile(0.95, sum by (le) (rate(tcc_latencia_estado_seconds_bucket[5m]))) > 5
+        for: 5m
+        labels: { severidad: pagina }
+        annotations:
+          resumen: "p95 de 'estado visible' supera 5 s (SLO). Revisar lag del procesador y PostgreSQL."
+
+      - alert: NotificacionLentaP95
+        expr: histogram_quantile(0.95, sum by (le) (rate(tcc_latencia_notificacion_seconds_bucket[10m]))) > 60
+        for: 10m
+        labels: { severidad: ticket }
+        annotations:
+          resumen: "p95 de notificación supera 60 s (SLO). Revisar proveedores y circuitos."
+
+      - alert: LagProcesadorCreciente
+        expr: sum(clamp_min(kafka_consumergroup_lag{consumergroup="procesador-estado"}, 0)) > 10000
+        for: 5m
+        labels: { severidad: pagina }
+        annotations:
+          resumen: "El procesador acumula más de 10.000 eventos sin procesar. Escalar instancias (máx. 24) o revisar PostgreSQL."
+
+      - alert: IngestaNoDurable
+        expr: sum(increase(tcc_eventos_recibidos_total{resultado="no_durable"}[5m])) > 0
+        labels: { severidad: pagina }
+        annotations:
+          resumen: "La API respondió 503: ni Kafka ni la contingencia guardaron eventos."
+
+      - alert: IngestaEnContingencia
+        expr: sum(increase(tcc_eventos_contingencia_total[5m])) > 0
+        labels: { severidad: ticket }
+        annotations:
+          resumen: "Kafka no confirma: la API opera en contingencia (sin pérdida, pero degradada)."
+
+      - alert: MensajesEnDlq
+        expr: sum by (origen) (increase(tcc_dlq_total[10m])) > 0
+        labels: { severidad: ticket }
+        annotations:
+          resumen: "Hay mensajes nuevos en la DLQ de {{ $labels.origen }}: requieren revisión y redrive."

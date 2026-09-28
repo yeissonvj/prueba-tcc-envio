@@ -1,0 +1,250 @@
+name: tcc-eventos
+
+# ---------- Configuración común de las aplicaciones (perfil "aplicaciones") ----------
+# docker compose --profile aplicaciones up -d --build   → todo el sistema en contenedores.
+# Toda la configuración llega por variables de entorno (12-factor); las imágenes corren en modo Production.
+x-app-comun: &app-comun
+  restart: unless-stopped
+  profiles: [aplicaciones]
+  environment: &app-entorno
+    Kafka__Servidores: kafka-1:19092,kafka-2:19092,kafka-3:19092
+    # GSS Encryption Mode=Disable: no se usa Kerberos y la imagen chiseled no trae libgssapi (evita un intento fallido por conexión).
+    Postgres__Conexion: Host=postgres;Port=5432;Database=tcc_eventos;Username=tcc;GSS Encryption Mode=Disable;Timeout=3;Command Timeout=5
+    Postgres__Contrasena: ${POSTGRES_PASSWORD:-tcc_local}
+    Observabilidad__OtlpEndpoint: http://otel-collector:4317
+  depends_on: &app-dependencias
+    kafka-init: { condition: service_completed_successfully }
+    migraciones: { condition: service_completed_successfully }
+
+# ---------- Configuración común de los brokers ----------
+x-kafka-comun: &kafka-comun
+  image: apache/kafka:4.1.2
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:19092 > /dev/null 2>&1"]
+    interval: 10s
+    timeout: 10s
+    retries: 12
+    start_period: 20s
+
+x-kafka-entorno: &kafka-entorno
+  CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+  KAFKA_PROCESS_ROLES: broker,controller
+  KAFKA_LISTENERS: INTERNO://:19092,CONTROLADOR://:9093,EXTERNO://:9092
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNO:PLAINTEXT,CONTROLADOR:PLAINTEXT,EXTERNO:PLAINTEXT
+  KAFKA_INTER_BROKER_LISTENER_NAME: INTERNO
+  KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLADOR
+  KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
+  # Garantías de durabilidad (Fase 1.2)
+  KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+  KAFKA_MIN_INSYNC_REPLICAS: 2
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+  KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE: "false"
+  KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+  # Ajustes para desarrollo local
+  KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+  KAFKA_HEAP_OPTS: -Xms512m -Xmx512m
+
+services:
+  # ---------- Kafka: 3 brokers en modo KRaft ----------
+  kafka-1:
+    <<: *kafka-comun
+    ports: ["29092:9092"]
+    environment:
+      <<: *kafka-entorno
+      KAFKA_NODE_ID: 1
+      KAFKA_ADVERTISED_LISTENERS: INTERNO://kafka-1:19092,EXTERNO://localhost:29092
+
+  kafka-2:
+    <<: *kafka-comun
+    ports: ["29093:9092"]
+    environment:
+      <<: *kafka-entorno
+      KAFKA_NODE_ID: 2
+      KAFKA_ADVERTISED_LISTENERS: INTERNO://kafka-2:19092,EXTERNO://localhost:29093
+
+  kafka-3:
+    <<: *kafka-comun
+    ports: ["29094:9092"]
+    environment:
+      <<: *kafka-entorno
+      KAFKA_NODE_ID: 3
+      KAFKA_ADVERTISED_LISTENERS: INTERNO://kafka-3:19092,EXTERNO://localhost:29094
+
+  # ---------- Creación de tópicos (se ejecuta una vez y termina) ----------
+  kafka-init:
+    image: apache/kafka:4.1.2
+    depends_on:
+      kafka-1: { condition: service_healthy }
+      kafka-2: { condition: service_healthy }
+      kafka-3: { condition: service_healthy }
+    volumes:
+      - ./kafka/crear-topicos.sh:/scripts/crear-topicos.sh:ro
+    entrypoint: ["/bin/sh", "/scripts/crear-topicos.sh"]
+    restart: "no"
+
+  # ---------- Interfaz web para ver tópicos y mensajes ----------
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    ports: ["127.0.0.1:8080:8080"]
+    environment:
+      KAFKA_CLUSTERS_0_NAME: tcc-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-1:19092,kafka-2:19092,kafka-3:19092
+    depends_on:
+      kafka-1: { condition: service_healthy }
+
+  # ---------- PostgreSQL: estado, historial y outbox ----------
+  postgres:
+    image: postgres:17
+    ports: ["127.0.0.1:5432:5432"]
+    environment:
+      POSTGRES_DB: tcc_eventos
+      POSTGRES_USER: tcc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tcc_local}
+    volumes:
+      - datos-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tcc -d tcc_eventos"]
+      interval: 5s
+      retries: 10
+
+  # ---------- Migraciones: los mismos .sql sirven para .NET y Java ----------
+  migraciones:
+    image: flyway/flyway:11-alpine
+    depends_on:
+      postgres: { condition: service_healthy }
+    volumes:
+      - ../db/migraciones:/flyway/sql:ro
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/tcc_eventos
+      FLYWAY_USER: tcc
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-tcc_local}
+    command: ["migrate"]
+    restart: "no"
+
+  # ---------- Keycloak: emite tokens OAuth2 (client credentials) a los sistemas emisores ----------
+  # Los secretos del realm son solo locales; en producción los clientes y secretos viven en el IdP corporativo.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    command: ["start-dev", "--import-realm", "--http-port=8081"]
+    ports: ["127.0.0.1:8081:8081"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin_local}
+      KC_HEALTH_ENABLED: "true"
+      # URL pública fija (claim iss) y URLs internas según quien pregunte: la API en Docker descarga las
+      # llaves por keycloak:8081 pero valida tokens emitidos como localhost:8081.
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    volumes:
+      - ./keycloak/tcc-realm.json:/opt/keycloak/data/import/tcc-realm.json:ro
+    healthcheck:
+      # La imagen no trae curl: se consulta /health/ready (puerto de gestión 9000) con /dev/tcp de bash.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+
+  # ---------- Redis: filtro de duplicados y lecturas rápidas ----------
+  redis:
+    image: redis:7-alpine
+    ports: ["127.0.0.1:6379:6379"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-tcc_local}
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\""]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping"]
+      interval: 5s
+      retries: 10
+
+  # ================= Observabilidad =================
+  # Las apps envían OTLP al Collector (localhost:4317); el Collector reparte a Jaeger y Prometheus.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.161.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    ports: ["127.0.0.1:4317:4317", "127.0.0.1:4318:4318"]
+    volumes:
+      - ./observabilidad/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    depends_on: [jaeger, loki]
+
+  jaeger:
+    image: jaegertracing/jaeger:2.21.0
+    ports: ["127.0.0.1:16686:16686"]   # interfaz de trazas
+
+  # Logs de las tres aplicaciones (llegan por OTLP desde el Collector); se consultan en Grafana.
+  loki:
+    image: grafana/loki:3.7.8
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./observabilidad/loki.yaml:/etc/loki/loki.yaml:ro
+      - datos-loki:/loki
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    ports: ["127.0.0.1:9090:9090"]
+    volumes:
+      - ./observabilidad/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observabilidad/alertas.yml:/etc/prometheus/alertas.yml:ro
+
+  # Lag de los grupos de consumo (kafka_consumergroup_lag): la señal de escalado del procesador y el notificador.
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.10.0
+    command: ["--kafka.server=kafka-1:19092", "--kafka.server=kafka-2:19092", "--kafka.server=kafka-3:19092"]
+    restart: unless-stopped
+    depends_on:
+      kafka-1: { condition: service_healthy }
+
+  grafana:
+    image: grafana/grafana:13.2.2
+    ports: ["127.0.0.1:3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin_local}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"      # solo local (127.0.0.1): lectura sin login
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/tableros/plataforma-eventos.json
+    volumes:
+      - ./observabilidad/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observabilidad/grafana/tableros:/var/lib/grafana/tableros:ro
+    depends_on: [prometheus, loki]
+
+  # ================= Aplicaciones =================
+  api:
+    <<: *app-comun
+    image: ${IMAGEN_API:-tcc-api:local}
+    build: { context: ../dotnet, args: { PROYECTO: TccEventos.Api, BASE: aspnet } }
+    ports: ["127.0.0.1:8090:8080"]
+    environment:
+      <<: *app-entorno
+      Redis__Conexion: redis:6379,abortConnect=false,connectTimeout=2000,asyncTimeout=250
+      Redis__Contrasena: ${REDIS_PASSWORD:-tcc_local}
+      Seguridad__Emisor: http://localhost:8081/realms/tcc          # el iss de los tokens (URL pública)
+      Seguridad__DireccionInterna: http://keycloak:8081/realms/tcc # de dónde descargar las llaves
+      Seguridad__RequiereHttps: "false"                            # solo local: Keycloak sin TLS
+    depends_on:
+      <<: *app-dependencias
+      redis: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+
+  procesador:
+    <<: *app-comun
+    image: ${IMAGEN_PROCESADOR:-tcc-procesador:local}
+    build: { context: ../dotnet, args: { PROYECTO: TccEventos.Procesador, BASE: runtime } }
+
+  notificador:
+    <<: *app-comun
+    image: ${IMAGEN_NOTIFICADOR:-tcc-notificador:local}
+    build: { context: ../dotnet, args: { PROYECTO: TccEventos.Notificador, BASE: runtime } }
+    environment:
+      <<: *app-entorno
+      # Simulación desde el panel de pruebas (herramientas/panel-pruebas); por defecto, comportamiento normal.
+      Proveedores__Sms__Caido: ${SIMULAR_SMS_CAIDO:-false}
+      Notificador__Reintentos__0__Espera: ${ESPERA_REINTENTO_1:-00:01:00}
+      Notificador__Reintentos__1__Espera: ${ESPERA_REINTENTO_2:-00:10:00}
+      Notificador__Reintentos__2__Espera: ${ESPERA_REINTENTO_3:-01:00:00}
+
+volumes:
+  datos-postgres:
+  datos-loki:

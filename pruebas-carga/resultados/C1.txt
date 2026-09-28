@@ -1,0 +1,3 @@
+corrida=C1
+aceptados=69849
+no_aceptados=0

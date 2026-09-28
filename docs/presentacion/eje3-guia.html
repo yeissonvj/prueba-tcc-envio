@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eje 3 · Guía práctica</title>
+<script src="acceso.js"></script>
+<script src="sesion.js"></script>
+<script>TCC.exigir({ soloAdmin: true })</script>
+<script src="reloj.js"></script>
+<style>
+  :root {
+    --fondo: #0d0b16; --panel: #16131f; --panel2: #1d1929; --borde: #2e2840; --texto: #e6e1f0; --tenue: #9d95b3;
+    --azul: #4ea1ff; --verde: #3ddc97; --morado: #b388ff; --rojo: #ff6b6b; --gris: #756d8a; --amarillo: #ffd166;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 15.5px/1.6 system-ui, "Segoe UI", Roboto, sans-serif; }
+  nav { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 4px; padding: 10px 20px;
+        background: rgba(13,11,22,.92); backdrop-filter: blur(6px); border-bottom: 1px solid var(--borde); overflow-x: auto; }
+  nav .marca { font-weight: 700; margin-right: 10px; white-space: nowrap; }
+  nav a { color: var(--tenue); text-decoration: none; padding: 5px 10px; border-radius: 6px; white-space: nowrap; font-size: 13px; }
+  nav a:hover, nav a.activo { color: var(--texto); background: var(--panel2); }
+  nav a.salto { color: var(--morado); border: 1px solid var(--borde); }
+  nav .ayuda { margin-left: auto; color: var(--gris); font-size: 12px; white-space: nowrap; padding-left: 12px; }
+  main { max-width: 1240px; margin: 0 auto; padding: 0 20px 60px; }
+  section { padding: 34px 0 22px; border-bottom: 1px solid var(--borde); min-height: 70vh; }
+  h1 { font-size: 30px; margin: 0 0 6px; }
+  h2 { font-size: 23px; margin: 0 0 4px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); color: var(--morado); font-size: 15px; }
+  h3 { font-size: 16px; margin: 0 0 10px; }
+  .sub { color: var(--tenue); margin: 0 0 20px; max-width: 980px; }
+  .grid { display: grid; gap: 14px; }
+  .g2 { grid-template-columns: repeat(2, 1fr); } .g3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 1000px) { .g2, .g3 { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 16px 18px; }
+  .card.m { border-top: 3px solid var(--morado); } .card.v { border-top: 3px solid var(--verde); } .card.a { border-top: 3px solid var(--amarillo); } .card.z { border-top: 3px solid var(--azul); } .card.r { border-top: 3px solid var(--rojo); }
+  .ok { color: var(--verde); } .mo { color: var(--morado); } .am { color: var(--amarillo); } .az { color: var(--azul); } .ro { color: var(--rojo); }
+  ul.limpia { list-style: none; padding: 0; margin: 0; } ul.limpia li { padding: 5px 0 5px 22px; position: relative; } ul.limpia li::before { content: "✦"; position: absolute; left: 2px; color: var(--morado); font-size: 12px; top: 8px; }
+  ol { margin: 0; padding-left: 22px; } ol li { padding: 4px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+  th { color: var(--tenue); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
+  .dialogo { display: grid; gap: 8px; }
+  .linea { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: start; }
+  .quien { font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; text-align: center; }
+  .quien.l { background: #221a38; color: var(--morado); } .quien.p { background: #2b2710; color: var(--amarillo); } .quien.j { background: #0f2c22; color: var(--verde); }
+  .linea p { margin: 0; background: var(--panel2); border: 1px solid var(--borde); border-radius: 10px; padding: 8px 12px; }
+  .linea .por { display: block; color: var(--gris); font-size: 12.5px; margin-top: 4px; font-style: italic; }
+  .antes-despues { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .antes, .despues { border-radius: 10px; padding: 10px 12px; font-size: 14.5px; }
+  .antes { background: #2a1616; border: 1px solid #6b2a2a; } .despues { background: #0f2c22; border: 1px solid #1f6b4f; }
+  .antes b { color: var(--rojo); } .despues b { color: var(--verde); }
+  .animo { margin-top: 14px; background: linear-gradient(90deg, #2a1f45 0%, var(--panel) 80%); border: 1px solid #4b3a78; padding: 11px 16px; border-radius: 10px; }
+  .animo::before { content: "✦ "; color: var(--amarillo); }
+  .nota { color: var(--gris); font-size: 13px; margin-top: 10px; }
+  .pie { color: var(--gris); font-size: 12px; padding: 24px 0; text-align: center; }
+  @media print { nav { display: none; } section { break-after: page; min-height: auto; } }
+</style>
+</head>
+<body>
+<nav id="nav">
+  <span class="marca">TCC · Eje 3 <span style="color:var(--morado);font-family:var(--mono);font-size:13px">guía práctica</span></span>
+  <a class="salto" href="index.html">⌂ Inicio</a>
+  <a class="salto" href="eje3-vista-general.html">← Vista general</a>
+  <a href="#equipo">Equipo</a>
+  <a href="#plan">90 días</a>
+  <a href="#empoderar">Empoderar</a>
+  <a href="#estandares">Estándares</a>
+  <a href="#mentoria">Mentoría</a>
+  <a href="#desacuerdos">Desacuerdos</a>
+  <a href="#misma-sala">Misma sala</a>
+  <a href="#crecimiento">Indicadores</a>
+  <a href="#cierre">18 meses</a>
+  <span class="ayuda">← → para navegar</span>
+</nav>
+
+<main>
+
+<!-- ============ EQUIPO ============ -->
+<section id="equipo">
+  <h1>Guía práctica · liderar el reto con un equipo pequeño</h1>
+  <p class="sub">El hilo conductor de todo el eje: <b>que el equipo no involucione</b>, es decir, que el conocimiento y la calidad no dependan de una sola persona. Aquí está el "cómo", con ejemplos concretos.</p>
+
+  <div class="grid g3">
+    <div class="card m">
+      <h3>El equipo que imaginamos</h3>
+      <ul class="limpia">
+        <li>3 a 5 personas: 1 senior, 2 intermedios, 1 o 2 junior</li>
+        <li>Experiencia mixta en Java, .NET, Angular y Node.js</li>
+        <li>Un solo equipo con un objetivo común, no islas por tecnología</li>
+      </ul>
+    </div>
+    <div class="card z">
+      <h3>Propiedad por componente, no por persona</h3>
+      <ul class="limpia">
+        <li>Recepción, procesador y notificador: cada uno con un <b>responsable principal y un segundo</b></li>
+        <li>Ningún componente depende de una sola persona</li>
+        <li>Rotación planificada cada trimestre</li>
+      </ul>
+    </div>
+    <div class="card v">
+      <h3>Sin héroes</h3>
+      <ul class="limpia">
+        <li>Si solo una persona puede resolver un problema en el pico, es un <b>riesgo</b>, no un mérito</li>
+        <li>Se celebra a quien documenta y enseña, no solo a quien "apaga incendios"</li>
+        <li>La rotación cuesta algo de velocidad hoy y compra resiliencia mañana</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PLAN ============ -->
+<section id="plan">
+  <h2><span class="num">01</span>Los primeros 90 días, mes a mes</h2>
+  <p class="sub">Supuesto: empezamos en octubre, así que el tercer mes coincide con la temporada pico (Black Friday, Cyber Lunes, Navidad). Lanzar un sistema nuevo en pleno pico sería el mayor riesgo posible; por eso la meta es llegar al pico <b>en modo sombra</b>: el sistema nuevo recibe una copia del tráfico real, sin afectar a los clientes, y aprendemos con volumen real y cero riesgo.</p>
+
+  <div class="grid g3">
+    <div class="card z">
+      <h3 class="az">Mes 1 · Entender</h3>
+      <ul class="limpia">
+        <li>Conversación 1 a 1 con cada persona: fortalezas, intereses, frustraciones</li>
+        <li>Mapa de los sistemas actuales y de qué falló en el último pico</li>
+        <li>Línea base: frecuencia de despliegue, tiempo de entrega, tasa de fallas, tiempo de recuperación</li>
+        <li><b>Victoria temprana:</b> tableros de observabilidad sobre lo que ya existe</li>
+        <li><b>No cambiar nada grande todavía</b></li>
+      </ul>
+      <p class="nota">Preguntas para el primer 1 a 1: ¿qué te gusta de trabajar aquí? ¿qué te frustra? ¿qué quieres aprender este año? ¿qué debería saber de ti para trabajar mejor juntos?</p>
+    </div>
+    <div class="card m">
+      <h3 class="mo">Mes 2 · Fundamentos</h3>
+      <ul class="limpia">
+        <li>Estándares acordados en un taller con todo el equipo</li>
+        <li>Pipeline de integración y entrega continua funcionando</li>
+        <li>Un "esqueleto que camina": la versión más simple del sistema recorriendo todo el pipeline hasta staging</li>
+        <li>Primeras decisiones de arquitectura (ADR) <b>escritas por el equipo, no por el líder</b></li>
+      </ul>
+    </div>
+    <div class="card v">
+      <h3 class="ok">Mes 3 · Entregar</h3>
+      <ul class="limpia">
+        <li>Piloto con un solo sistema origen: el TMS</li>
+        <li>Prueba de carga contra las metas acordadas</li>
+        <li>Modo sombra durante el pico</li>
+        <li>Retrospectiva al cierre del trimestre</li>
+        <li>Decisión de la migración real en enero, <b>con los datos del pico en la mano</b></li>
+      </ul>
+    </div>
+  </div>
+  <p class="animo">Quien llega cambiando todo pierde la confianza del equipo. Primero se escucha; después se construye juntos.</p>
+</section>
+
+<!-- ============ EMPODERAR ============ -->
+<section id="empoderar">
+  <h2><span class="num">02</span>Integrar y empoderar al equipo</h2>
+  <p class="sub">El líder facilita y decide solo cuando el equipo se bloquea. Estas prácticas convierten esa intención en hábitos.</p>
+
+  <div class="grid g2">
+    <div class="card m">
+      <h3>Prácticas</h3>
+      <table>
+        <tr><th>Práctica</th><th>Por qué funciona</th></tr>
+        <tr><td>Cualquier persona puede escribir una decisión de arquitectura (ADR)</td><td>Las decisiones dejan de depender del líder y todos entienden el porqué</td></tr>
+        <tr><td>En las demos con producto habla quien lo construyó</td><td>Da visibilidad y reconocimiento; el negocio conoce al equipo</td></tr>
+        <tr><td>Programación en pareja en las piezas delicadas</td><td>Reparte el conocimiento y reduce errores al mismo tiempo</td></tr>
+        <tr><td>Guardia rotativa en el pico, acompañada las primeras veces</td><td>Todos aprenden a operar el sistema sin quedar solos</td></tr>
+        <tr><td>Autonomía con barandas automáticas</td><td>El pipeline protege la calidad, así se puede dar libertad sin miedo</td></tr>
+      </table>
+    </div>
+    <div class="card v">
+      <h3>Cómo se integra a alguien que llega</h3>
+      <ol>
+        <li><b>Día 1:</b> una persona "compañera de llegada" asignada, no el líder</li>
+        <li><b>Semana 1:</b> levanta el sistema completo con la guía del repositorio y corrige lo que encuentre confuso en esa misma guía</li>
+        <li><b>Semana 2:</b> primer cambio pequeño en producción, en pareja</li>
+        <li><b>Mes 1:</b> segundo de un componente, con un plan de aprendizaje acordado</li>
+      </ol>
+      <p class="nota">Meta: que una persona nueva haga su primer despliegue en menos de dos semanas. Si tarda más, el problema es la documentación, no la persona.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ESTANDARES ============ -->
+<section id="estandares">
+  <h2><span class="num">03</span>Definir estándares</h2>
+  <p class="sub">El principio: <b>acordados, pocos y automatizados</b>. Se construyen en un taller a partir de un borrador del líder y se revisan en cada retrospectiva.</p>
+
+  <div class="grid g3">
+    <div class="card m">
+      <h3>Los cinco iniciales</h3>
+      <ol>
+        <li>Cambios pequeños (fáciles de revisar)</li>
+        <li>Revisión en menos de 24 horas</li>
+        <li>Pruebas obligatorias en las reglas del negocio</li>
+        <li>El contrato con otros sistemas siempre versionado</li>
+        <li>Todo componente nuevo con métricas</li>
+      </ol>
+    </div>
+    <div class="card z">
+      <h3>Lo que revisa la máquina</h3>
+      <ul class="limpia">
+        <li>Formato y estilo</li>
+        <li>Análisis de código y cobertura</li>
+        <li>Reglas de arquitectura</li>
+        <li>Seguridad de dependencias</li>
+      </ul>
+      <p class="nota">Así la revisión humana se concentra en el diseño, no en espacios y comas.</p>
+    </div>
+    <div class="card a">
+      <h3>Comentarios de revisión con etiqueta</h3>
+      <ul class="limpia">
+        <li><b class="ro">Bloqueante:</b> hay que resolverlo antes de integrar</li>
+        <li><b class="am">Sugerencia:</b> vale la pena, pero se puede discutir</li>
+        <li><b>Detalle:</b> opcional, a gusto de quien escribió el código</li>
+      </ul>
+      <p class="nota">Reduce roces: quien recibe la revisión sabe exactamente qué es obligatorio.</p>
+    </div>
+  </div>
+  <p class="animo">Un estándar que estorba se cambia. No son leyes: son acuerdos del equipo.</p>
+</section>
+
+<!-- ============ MENTORIA ============ -->
+<section id="mentoria">
+  <h2><span class="num">04</span>Acompañar: mentorías</h2>
+  <p class="sub">Multiplicar, no concentrar: el perfil senior también acompaña y el líder acompaña a quienes acompañan.</p>
+
+  <div class="grid g2">
+    <div class="card v">
+      <h3>Ejemplo de plan individual (persona junior)</h3>
+      <table>
+        <tr><th>Qué</th><th>Cómo</th></tr>
+        <tr><td>Objetivo acordado en el 1 a 1</td><td>Aprender reintentos y resiliencia</td></tr>
+        <tr><td>Rol en el proyecto</td><td>Segundo responsable del notificador</td></tr>
+        <tr><td>Acompañamiento</td><td>Pareja con el responsable principal dos veces por semana</td></tr>
+        <tr><td>Práctica</td><td>Un ejercicio corto de Kafka cada dos semanas</td></tr>
+        <tr><td>Hito a 3 meses</td><td>Explica en la demo cómo el notificador sobrevive a la caída del SMS</td></tr>
+        <tr><td>Hito a 6 meses</td><td>Primera guardia en el pico, acompañada</td></tr>
+      </table>
+    </div>
+    <div class="card m">
+      <h3>Formatos</h3>
+      <ul class="limpia">
+        <li><b>Programación en pareja</b> en las piezas críticas</li>
+        <li><b>Ejercicios cortos</b> ("katas") de Kafka y de pruebas</li>
+        <li><b>Análisis de incidentes</b> en grupo, sin culpables</li>
+        <li><b>Espacio semanal</b> de preguntas abiertas</li>
+        <li><b>Revisiones de código que enseñan:</b> explicar el porqué, no solo el qué</li>
+        <li><b>IA como tutora:</b> "pídele que te explique por qué", no solo "pídele que lo haga"</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DESACUERDOS ============ -->
+<section id="desacuerdos">
+  <h2><span class="num">05</span>Resolver un desacuerdo técnico: un ejemplo</h2>
+  <p class="sub">Dos personas del equipo no se ponen de acuerdo: una quiere <b>Kafka</b> para el notificador y la otra <b>RabbitMQ</b>. Así se resuelve sin jerarquía ni gritos.</p>
+
+  <div class="grid g2">
+    <div class="card m">
+      <ol>
+        <li><b>Criterios antes que opiniones.</b> Se acuerda qué importa: no perder mensajes, poder reprocesar, lo que el equipo ya sabe operar, costo.</li>
+        <li><b>Datos cuando se puede.</b> Una prueba de concepto de dos días con ambos, contra esos criterios. Vale más que dos semanas de debate.</li>
+        <li><b>¿Se puede deshacer?</b> Elegir el broker es costoso de revertir, así que merece más análisis que, por ejemplo, el nombre de una librería.</li>
+        <li><b>Tiempo límite.</b> Si al final del plazo no hay consenso, el líder decide, explica por qué y lo deja escrito en un ADR con las opciones descartadas.</li>
+        <li><b>Discrepar y comprometerse.</b> Una vez decidido, todos lo sacan adelante. Si los datos luego muestran otra cosa, se revisa sin culpas.</li>
+      </ol>
+    </div>
+    <div class="card z">
+      <h3>Frases que ayudan</h3>
+      <ul class="limpia">
+        <li>"Antes de elegir, ¿estamos de acuerdo en qué es lo más importante aquí?"</li>
+        <li>"¿Qué dato nos haría cambiar de opinión a cada uno?"</li>
+        <li>"Si esto sale mal, ¿qué tan caro es devolverse?"</li>
+        <li>"Tenemos hasta el jueves; si no llegamos a un acuerdo, decido yo y lo dejamos escrito."</li>
+        <li>"Gracias por defender tu idea: eso hizo mejor la decisión, aunque hayamos elegido la otra."</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MISMA SALA ============ -->
+<section id="misma-sala">
+  <h2><span class="num">06</span>Producto y un desarrollador junior en la misma sala</h2>
+  <p class="sub">Situación: producto quiere una funcionalidad nueva antes del pico. En la reunión están el líder de producto, una persona junior del equipo y el líder técnico. Así podría ir la conversación.</p>
+
+  <div class="card m">
+    <div class="dialogo">
+      <div class="linea"><span class="quien p">Producto</span><p>Necesitamos que el cliente reciba el aviso por WhatsApp antes de Black Friday.</p></div>
+      <div class="linea"><span class="quien l">Líder técnico</span><p>Empecemos por el cliente: hoy recibe SMS o correo y nunca se queda sin aviso. Déjenme dibujarlo en el tablero. <span class="por">Empieza por algo que todos entienden y usa un dibujo, no jerga.</span></p></div>
+      <div class="linea"><span class="quien l">Líder técnico</span><p>Tú construiste los reintentos del notificador, ¿nos cuentas qué pasa cuando el SMS se cae? <span class="por">Le da la voz a la persona junior, preparada antes para ese momento.</span></p></div>
+      <div class="linea"><span class="quien j">Junior</span><p>Se aparta el mensaje, se reintenta en 1 minuto, 10 minutos y 1 hora, y si no, sale por correo. Las demás guías no esperan.</p></div>
+      <div class="linea"><span class="quien l">Líder técnico</span><p>Justo por eso WhatsApp encaja bien: sería un canal más en esa escalera. Tenemos dos opciones: agregarlo antes del pico, con riesgo de inestabilidad en la semana de más volumen, o en enero, sin riesgo. ¿Cuál prefieres? <span class="por">Opciones con consecuencias, no un "no".</span></p></div>
+      <div class="linea"><span class="quien p">Producto</span><p>¿Y si solo lo probamos con un cliente grande?</p></div>
+      <div class="linea"><span class="quien l">Líder técnico</span><p>Buena idea: menos riesgo y aprendemos con datos reales. ¿Qué te preocupa a ti de esa opción? <span class="por">Pregunta a la persona junior en lugar de darle la respuesta.</span></p></div>
+      <div class="linea"><span class="quien j">Junior</span><p>Que ese cliente reciba avisos repetidos si reintentamos.</p></div>
+      <div class="linea"><span class="quien l">Líder técnico</span><p>Excelente punto: lo cubre la misma protección contra duplicados que ya tenemos. Entonces cerramos así: piloto con un cliente, lo lideras tú con apoyo del senior, y lo escribo en el acta con la fecha de revisión. <span class="por">Reconocimiento en público, decisión y responsables por escrito.</span></p></div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card a">
+      <h3 class="am">Con el líder de producto</h3>
+      <ul class="limpia">
+        <li>Traducir lo técnico a impacto: riesgo, costo, tiempo y experiencia del cliente</li>
+        <li>Presentar opciones con consecuencias, nunca un "no" seco</li>
+        <li>La deuda técnica como riesgo de negocio</li>
+        <li>Un porcentaje fijo de cada ciclo (por ejemplo, 20 %) para calidad, sin negociarlo cada vez</li>
+        <li>Las metas del servicio (por ejemplo, "estado visible en menos de 5 s") como promesa compartida</li>
+      </ul>
+      <div class="antes-despues" style="margin-top:10px">
+        <div class="antes"><b>En vez de:</b> "hay que refactorizar el procesador"</div>
+        <div class="despues"><b>Decir:</b> "hoy un error tarda 4 horas en diagnosticarse; con esta mejora baja a 20 minutos, en plena temporada"</div>
+      </div>
+    </div>
+    <div class="card v">
+      <h3 class="ok">Con el desarrollador de menor experiencia</h3>
+      <ul class="limpia">
+        <li><b>Seguridad psicológica:</b> preguntar debe ser más barato que equivocarse en silencio. El líder da el ejemplo diciendo "no sé" en público</li>
+        <li><b>Preguntas antes que respuestas:</b> "¿qué pasaría si este evento llega dos veces?"</li>
+        <li><b>Críticas en privado, reconocimientos en público</b></li>
+        <li><b>Incidentes sin culpables:</b> "¿qué permitió el sistema?", no "¿quién se equivocó?"</li>
+      </ul>
+      <div class="antes-despues" style="margin-top:10px">
+        <div class="antes"><b>En vez de:</b> "te faltó la idempotencia"</div>
+        <div class="despues"><b>Modelo SCI:</b> "En el PR de ayer (situación), el consumidor confirma antes de guardar (comportamiento); si el proceso cae ahí, perdemos el evento (impacto). ¿Cómo lo resolverías?"</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CRECIMIENTO ============ -->
+<section id="crecimiento">
+  <h2><span class="num">07</span>Cómo sabemos que el equipo no involuciona</h2>
+  <p class="sub">Indicadores medidos contra la línea base del primer mes y revisados en cada retrospectiva trimestral.</p>
+
+  <div class="grid g2">
+    <div class="card m">
+      <table>
+        <tr><th>Indicador</th><th>Qué nos dice</th></tr>
+        <tr><td>Métricas de entrega y estabilidad (DORA) estables o mejorando</td><td>La velocidad no se consigue a costa de la estabilidad</td></tr>
+        <tr><td>Ningún componente con un solo conocedor</td><td>El conocimiento está repartido</td></tr>
+        <tr><td>Decisiones (ADR) escritas por distintas personas</td><td>Las decisiones no dependen solo del líder</td></tr>
+        <tr><td>Tiempo de adaptación de una persona nueva</td><td>La documentación y los estándares funcionan</td></tr>
+        <tr><td>Satisfacción del equipo en las retrospectivas</td><td>El ritmo es sostenible</td></tr>
+      </table>
+    </div>
+    <div class="card v">
+      <h3>Señales de alerta (y qué hacer)</h3>
+      <ul class="limpia">
+        <li><b>Siempre la misma persona resuelve los incidentes</b> → pareja obligatoria en la próxima guardia</li>
+        <li><b>Nadie pregunta en las reuniones</b> → el líder pregunta primero y reconoce las preguntas</li>
+        <li><b>Las revisiones tardan días</b> → revisar el tamaño de los cambios y el acuerdo de 24 horas</li>
+        <li><b>El ánimo cae antes del pico</b> → recortar alcance a tiempo, no horas de sueño</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CIERRE ============ -->
+<section id="cierre">
+  <h2><span class="num">08</span>A dónde queremos llegar en 18 meses</h2>
+  <p class="sub">Tomando octubre de 2026 como inicio, los 18 meses cubren dos temporadas pico: la primera en modo sombra y la segunda operando de verdad. Son metas de la propuesta, a validar contra la línea base del primer mes.</p>
+
+  <div class="grid g2">
+    <div class="card v">
+      <h3>El equipo</h3>
+      <ul class="limpia">
+        <li>Cada componente tiene al menos dos personas que lo dominan</li>
+        <li>Quienes llegaron como junior son responsables principales de un componente y acompañan a quien llega</li>
+        <li>Otros equipos adoptan la plataforma y los estándares por decisión propia, porque les resuelven problemas, no por imposición</li>
+      </ul>
+    </div>
+    <div class="card m">
+      <table>
+        <tr><th>Meta a 18 meses</th><th>Valor</th></tr>
+        <tr><td>Eventos perdidos</td><td>0, verificado cada día</td></tr>
+        <tr><td>Incidentes graves en el pico</td><td>0 que afecten a clientes</td></tr>
+        <tr><td>Tiempo de recuperación ante fallas</td><td>menos de 30 minutos</td></tr>
+        <tr><td>Componentes con un solo conocedor</td><td>0</td></tr>
+        <tr><td>Primer despliegue de una persona nueva</td><td>menos de 2 semanas</td></tr>
+      </table>
+    </div>
+  </div>
+  <p class="animo">El éxito no es tener decenas de microservicios ni la tecnología más moderna, ni un equipo que depende del líder para cada decisión. Es un sistema aburrido en temporada pico, sostenido por un equipo que sabe cómo y por qué funciona.</p>
+</section>
+
+<div class="pie">Repositorio: github.com/yeissonvj/prueba-tcc-envio (rama develop) · ver también docs/liderazgo.md y docs/vision.md</div>
+</main>
+
+<script>
+  const secciones = [...document.querySelectorAll('section')];
+  const enlaces = [...document.querySelectorAll('nav a')];
+  function actual() { const y = window.scrollY + 90; let i = 0; secciones.forEach((s, k) => { if (s.offsetTop <= y) i = k; }); return i; }
+  function marcar() { const id = secciones[actual()].id; enlaces.forEach(a => a.classList.toggle('activo', a.getAttribute('href') === '#' + id)); }
+  document.addEventListener('keydown', e => {
+    const sig = ['ArrowRight', 'PageDown'].includes(e.key), ant = ['ArrowLeft', 'PageUp'].includes(e.key);
+    if (!sig && !ant) return;
+    e.preventDefault();
+    secciones[Math.min(secciones.length - 1, Math.max(0, actual() + (sig ? 1 : -1)))].scrollIntoView({ behavior: 'smooth' });
+  });
+  window.addEventListener('scroll', marcar, { passive: true }); marcar();
+</script>
+</body>
+</html>

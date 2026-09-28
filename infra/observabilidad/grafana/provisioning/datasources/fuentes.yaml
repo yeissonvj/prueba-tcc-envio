@@ -1,0 +1,27 @@
+apiVersion: 1
+
+# Métricas (Prometheus) y logs (Loki). Las trazas se exploran en la interfaz de Jaeger
+# (http://localhost:16686): Jaeger 2.21 sirve únicamente su API v3 y el plugin de Jaeger de Grafana usa
+# la API anterior. Cada log con trace_id trae un enlace directo a su traza en Jaeger.
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - name: TraceId
+          matcherType: label          # trace_id llega como metadato estructurado (OTLP), no dentro del texto
+          matcherRegex: trace_id
+          # $$ escapa la variable: Grafana expande ${...} como variables de entorno en este archivo.
+          url: "http://localhost:16686/trace/$${__value.raw}"
+          urlDisplayLabel: Ver traza en Jaeger

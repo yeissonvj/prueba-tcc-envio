@@ -1,0 +1,91 @@
+{
+  "realm": "tcc",
+  "enabled": true,
+  "sslRequired": "external",
+  "accessTokenLifespan": 300,
+  "clientScopes": [
+    {
+      "name": "eventos:escribir",
+      "description": "Permite enviar eventos de estado de guía a la API de ingesta",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "audiencia-api-ingesta",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "api-ingesta",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "name": "guias:leer",
+      "description": "Permite consultar el estado y el historial de las guías",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "audiencia-api-ingesta",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "api-ingesta",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "tms",
+      "name": "TMS · sistema de gestión de transporte",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "tms-secreto-solo-local",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": ["eventos:escribir"],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "transporte",
+      "name": "Transporte · apps de mensajeros",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "transporte-secreto-solo-local",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": ["eventos:escribir"],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "portal-consulta",
+      "name": "Portal de rastreo (solo lectura, sin permiso de escritura)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "portal-secreto-solo-local",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": ["guias:leer"],
+      "optionalClientScopes": []
+    }
+  ]
+}

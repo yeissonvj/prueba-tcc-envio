@@ -1,0 +1,418 @@
+EJE 1 · ARQUITECTURA DE LA SOLUCIÓN
+Explicación narrada, para contarla como un profesor
+====================================================
+
+Cómo usar este texto
+--------------------
+Acompaña a la vista general (eje1-vista-general.html). Cada parte corresponde a una
+diapositiva. No es para leerlo palabra por palabra: es la historia que hay que contar.
+Las frases entre [corchetes] son indicaciones para ti, no para decirlas.
+
+Si alguien del público quiere más detalle técnico, cada diapositiva tiene el botón
+"Ver detalle técnico", que abre la versión para desarrolladores.
+
+
+----------------------------------------------------------------------
+0. EL RETO
+----------------------------------------------------------------------
+
+Empecemos por algo que todos hemos vivido: compramos algo por internet y entramos
+una y otra vez a ver "¿dónde está mi paquete?".
+
+Detrás de esa pregunta tan simple hay un problema grande. En una empresa como TCC,
+muchos sistemas saben cosas del envío: el sistema que crea las guías, la aplicación
+del mensajero, las bandas automáticas de las bodegas, el área internacional. Cada vez
+que algo le pasa al paquete —lo recogieron, llegó a la bodega, salió a reparto— uno
+de esos sistemas lo reporta. A cada reporte lo llamamos "evento".
+
+[Señalar el diagrama de izquierda a derecha]
+
+Nuestra plataforma está en el medio. Hace tres cosas: recibe esos eventos, actualiza
+el estado de la guía y le avisa al cliente.
+
+¿Y cuál es la dificultad? El volumen. Hablamos de unos 19 millones de eventos al día,
+y en temporada pico —Black Friday, Navidad— llegan ráfagas de hasta 5.000 por segundo.
+
+[Señalar las tres píldoras de colores]
+
+Por eso nos pusimos tres promesas: no perder ni un solo evento, que el estado se vea
+en menos de 5 segundos y aguantar cuatro veces la carga normal.
+
+[Señalar los números de abajo]
+
+Lo que quiero que se lleven de esta primera diapositiva es que estas cifras no son
+deseos: las medimos. En las pruebas de carga el sistema aceptó más de 138 mil eventos
+y los 138 mil llegaron a la base de datos. Cero perdidos. Y en una de esas pruebas
+apagamos a la fuerza una pieza a mitad de camino, a propósito.
+
+
+----------------------------------------------------------------------
+1. COMPONENTES
+----------------------------------------------------------------------
+
+Veamos las piezas. La idea central es muy sencilla, y para explicarla uso una imagen:
+un tablero de anuncios, como el de la cartelera de un colegio.
+
+[Señalar Kafka]
+
+Kafka es ese tablero. Quien tiene una noticia la pega en el tablero y se va; no
+necesita saber quién la va a leer. Y quien quiere enterarse va y lee el tablero a su
+ritmo.
+
+Ahora sigamos el camino de arriba:
+- Los sistemas emisores le entregan el evento a la API, que es la puerta de entrada.
+  Antes de abrir la puerta, la API pide un "pase", que lo entrega Keycloak. Más
+  adelante hablaremos de seguridad.
+- La API pega el evento en el tablero y responde "recibido".
+- El Procesador lee el tablero, decide cuál es el nuevo estado de la guía y lo guarda
+  en la base de datos, PostgreSQL.
+
+Y el camino de abajo:
+- Cuando el estado cambia, se publica un nuevo anuncio: "la guía tal pasó a en reparto".
+- El Notificador lee ese anuncio, decide si vale la pena avisarle al cliente y le
+  manda un SMS o un correo.
+
+[Señalar el cuadro punteado "Plan B"]
+
+¿Y si el tablero se cae? Para eso está el plan B: la API guarda el evento en la base
+de datos y, cuando Kafka vuelve, lo reenvía solo.
+
+¿Por qué separar todo así? Porque si una pieza falla, las demás siguen. Si el
+proveedor de SMS se cae, los mensajes se atrasan un rato, pero seguimos recibiendo
+eventos y la gente sigue viendo dónde está su paquete.
+
+
+----------------------------------------------------------------------
+2. ARQUITECTURA HEXAGONAL
+----------------------------------------------------------------------
+
+Hasta ahora miramos el sistema desde afuera. Ahora abramos una de esas cajas y veamos
+cómo está organizada por dentro.
+
+Imaginen una cebolla.
+
+[Señalar el centro verde]
+
+En el centro están las reglas del negocio: qué estados existen, en qué orden pueden
+ocurrir, qué pasa si llega un evento repetido o uno viejo. A esto lo llamamos el
+dominio. Lo importante es que el centro no sabe nada de tecnología: no sabe qué es
+Kafka, ni qué base de datos usamos, ni cómo se manda un SMS. Solo sabe de guías.
+
+[Señalar la capa azul]
+
+Alrededor están los casos de uso: recibir un evento, procesarlo, notificar. Son las
+acciones que el sistema sabe hacer.
+
+[Señalar los puntos naranjas]
+
+Y para hablar con el mundo exterior, los casos de uso tienen "enchufes". Un enchufe
+dice, por ejemplo, "necesito algo que guarde guías", pero no dice cómo.
+
+[Señalar la derecha]
+
+Afuera están las tecnologías, que se conectan a esos enchufes: Kafka, PostgreSQL,
+Redis, el proveedor de SMS.
+
+Piensen en un enchufe de pared: a la pared no le importa si conectan una lámpara o
+un computador. Si mañana cambiamos el proveedor de SMS, construimos otro "aparato"
+que encaje en el mismo enchufe, y las reglas del negocio no se tocan.
+
+Un detalle más: esta regla no depende de la buena voluntad de cada programador. Hay
+pruebas automáticas que revisan que el centro no dependa de nada. Si alguien, sin
+querer, mete Kafka en las reglas del negocio, el sistema no se deja publicar.
+
+
+----------------------------------------------------------------------
+3. EL VIAJE DE UN EVENTO
+----------------------------------------------------------------------
+
+Sigamos a un solo evento en su viaje. Digamos que el mensajero reporta que el paquete
+salió a reparto.
+
+[Recorrer los círculos del 1 al 5]
+
+1. Llega a la API, que revisa el pase y que el mensaje venga bien escrito.
+2. Queda a salvo: Kafka lo guarda en tres copias, en tres máquinas distintas. Solo
+   entonces le respondemos al emisor "recibido". Esta es la parte más importante:
+   nunca decimos "recibido" antes de tenerlo guardado.
+3. El procesador cambia el estado. Y aquí hay algo clave: guarda el historial, el
+   nuevo estado y el anuncio del cambio todo junto, en un solo paso. O se guarda todo
+   o no se guarda nada; nunca queda a medias.
+4. Se anuncia el cambio, en orden. Así el cliente nunca recibe "va en camino"
+   después de "entregado".
+5. Se le avisa al cliente, una sola vez.
+
+Todo esto toma cerca de 0,4 segundos.
+
+[Señalar la fila de estados]
+
+Abajo está la vida de una guía: creada, recogida, en bodega, en tránsito, en reparto
+y entregada. A veces pasa algo —no había nadie en casa, la dirección está mal—, y eso
+es una "novedad", que termina en un nuevo intento de entrega o en una devolución.
+
+Una pregunta típica: ¿y si un evento viejo llega tarde? Por ejemplo, el aviso de
+"en tránsito" llega después del de "entregado". El sistema compara las fechas, se da
+cuenta de que es viejo y no retrocede el estado. Pero tampoco lo bota: lo guarda en
+el historial, porque para una auditoría sirve.
+
+
+----------------------------------------------------------------------
+4. INTEGRACIONES ENTRE SISTEMAS
+----------------------------------------------------------------------
+
+¿Cómo se conectan todos estos sistemas entre sí? Con dos reglas simples.
+
+[Señalar la izquierda]
+
+Primera regla: todos los que reportan entran por la misma puerta y hablan el mismo
+idioma. Ese idioma es un contrato: qué campos trae un evento y qué significan. Si
+alguien cambia el contrato por error, una prueba automática lo detecta antes de que
+le rompa algo al sistema del vecino.
+
+[Señalar la derecha]
+
+Segunda regla: todos los que necesitan enterarse se suscriben al tablero. Hoy leen
+el procesador y el notificador. Mañana pueden sumarse el sistema documental, un agente
+de inteligencia artificial que ayude con las novedades u otros que aún no conocemos.
+
+Lo bonito es que sumar un sistema nuevo no obliga a tocar a los demás: solo es un
+lector más del tablero. Y cada lector va a su ritmo: si uno se atrasa, no frena al
+resto.
+
+Un detalle que suele gustar: el evento no lleva el teléfono ni el correo del cliente.
+Eso lo pide la ley de protección de datos. El notificador busca esos datos justo en
+el momento de enviar el mensaje.
+
+
+----------------------------------------------------------------------
+5. CÓMO NO SE PIERDE NINGÚN EVENTO
+----------------------------------------------------------------------
+
+Esta es la diapositiva más importante, así que vamos despacio.
+
+La regla de oro es una sola: nunca decimos "recibido" si no está guardado.
+
+[Señalar los tres caminos]
+
+Cuando llega un evento pueden pasar tres cosas:
+- Lo normal: Kafka responde, el evento queda guardado en tres copias y decimos
+  "recibido".
+- Kafka no responde: usamos el plan B. Lo guardamos en la base de datos, decimos
+  "recibido" y, cuando Kafka vuelve, se reenvía solo.
+- Caso extremo: tampoco hay base de datos. Aquí no mentimos. Respondemos "intenta de
+  nuevo en un momento". El sistema que lo envió lo guarda y lo vuelve a mandar.
+
+¿Ven el patrón? En ningún camino el evento se pierde: o lo tenemos nosotros o lo
+tiene quien lo envió.
+
+[Señalar el cuadro de abajo a la izquierda]
+
+Ahora el problema contrario: ¿y si llega repetido? Pasa mucho. Un emisor no recibió
+nuestra respuesta y reenvía el mismo evento. Cada evento trae un número único, como
+la cédula de una persona, y la base de datos recuerda cuáles ya procesó. Si llega uno
+repetido, lo reconoce y no hace nada dos veces. Lo probamos procesando el mismo
+evento 50 veces al mismo tiempo: quedó una sola fila.
+
+[Señalar el cuadro de abajo a la derecha]
+
+Y una última idea: no todas las fallas se tratan igual.
+- Si falla el SMS de un cliente, apartamos ese mensaje y lo reintentamos en un
+  minuto, luego en diez, luego en una hora y, si nada funciona, mandamos un correo.
+  Mientras tanto, los mensajes de las demás guías siguen saliendo. Es como en un
+  banco: si a un cliente le falta un papel, lo mandan a una silla a esperar y la fila
+  sigue avanzando.
+- En el procesador, en cambio, sí esperamos, porque ahí el orden importa: no podemos
+  procesar "entregado" antes que "en reparto".
+
+Resultado: 138.375 eventos aceptados, 138.375 guardados. Cero pérdidas, incluso
+apagando el procesador a la fuerza en plena carga.
+
+
+----------------------------------------------------------------------
+6. ESCALABILIDAD
+----------------------------------------------------------------------
+
+¿Cómo aguantamos cuatro veces más carga? Dividiendo el trabajo.
+
+[Señalar los carriles naranjas]
+
+Piensen en un peaje con muchas casetas. Kafka divide el trabajo en 24 carriles. Y hay
+un truco: todos los eventos de una misma guía van siempre por el mismo carril. ¿Por
+qué? Porque dentro de un carril se respeta el orden de llegada, y así los eventos de
+un paquete nunca se desordenan. Mientras tanto, los 24 carriles avanzan al mismo
+tiempo.
+
+[Señalar los procesadores]
+
+Si hay mucho trabajo, sumamos otro procesador y los carriles se reparten entre ellos.
+Podemos llegar hasta 24, uno por carril.
+
+[Señalar las barras]
+
+Aquí hay una historia que me gusta contar. Cuando hicimos las pruebas de carga,
+descubrimos que el procesador era lento: atendía los carriles de a uno, como un
+cajero que atiende todas las filas. Lo cambiamos para que cada carril tenga su propio
+trabajador y pasamos de 90 a 343 eventos por segundo. Casi cuatro veces más.
+
+El punto no es el número: es que el cuello de botella no lo adivinamos. La prueba nos
+lo mostró, lo corregimos y volvimos a medir.
+
+Y para ser honestos: esas pruebas se hicieron en un portátil con todo corriendo a la
+vez. Para certificar los 5.000 por segundo hace falta infraestructura dedicada, y
+dejamos documentado cómo hacerlo.
+
+
+----------------------------------------------------------------------
+7. OBSERVABILIDAD
+----------------------------------------------------------------------
+
+Un sistema que no se puede observar es una caja negra. Cuando algo falla a las tres
+de la mañana, necesitamos saber qué pasó sin adivinar.
+
+Usamos tres lentes, y aquí me ayuda la imagen de un médico:
+
+[Señalar las tres cajas del centro]
+
+- Las trazas son como seguir a un paciente por todo el hospital: vemos el recorrido
+  completo de un evento, desde que entró por la API hasta que salió el SMS, con el
+  tiempo que tomó cada paso.
+- Las métricas son los signos vitales: cuántos eventos por segundo, cuánto atraso,
+  cuántos errores.
+- Los logs son la historia clínica: el diario de lo que pasó. Y cada anotación del
+  diario tiene un enlace directo al recorrido del evento, para no buscar a ciegas.
+
+Todo eso llega a Grafana, que es la pantalla donde vemos todo junto.
+
+[Señalar la alerta roja]
+
+¿Y las alarmas? Aquí hay una decisión importante: no suenan por cualquier ruido,
+suenan cuando rompemos una promesa al cliente. Por ejemplo, si el estado tarda más
+de 5 segundos en verse. Así el equipo de guardia no se acostumbra a ignorarlas.
+
+
+----------------------------------------------------------------------
+8. SEGURIDAD
+----------------------------------------------------------------------
+
+Para la seguridad usemos la imagen de un aeropuerto. Antes de subir al avión pasamos
+por varios controles, y si falla uno, nos detienen ahí.
+
+[Recorrer los cuatro controles de izquierda a derecha]
+
+1. ¿Tiene pase? Cada sistema tiene su propia identidad y recibe un pase —un token—
+   que vence a los 5 minutos. Sin pase válido: 401, "no te conozco".
+2. ¿Tiene permiso? No todos pueden hacer todo: uno puede escribir eventos, otro solo
+   consultar guías. Sin permiso: 403.
+3. ¿Es quien dice ser? Este es el más interesante. El TMS solo puede reportar eventos
+   como TMS: no puede hacerse pasar por la aplicación del mensajero. Así nadie puede
+   falsear el historial de una guía.
+4. ¿No está abusando? Si alguien manda demasiadas peticiones, le pedimos que baje el
+   ritmo: 429.
+
+Probamos los cuatro controles de verdad, incluso con un pase alterado a mano, y el
+sistema lo rechazó.
+
+[Señalar las etiquetas verdes]
+
+Además cuidamos los datos personales: el evento no lleva teléfono ni correo, y en
+los registros esos datos aparecen tapados. Los contenedores no tienen herramientas
+que un atacante pueda aprovechar, las conexiones van cifradas y cada cambio se
+revisa en busca de vulnerabilidades conocidas.
+
+
+----------------------------------------------------------------------
+9. VENTAJAS Y DESVENTAJAS
+----------------------------------------------------------------------
+
+Ninguna arquitectura es gratis, y desconfíen de quien les diga lo contrario.
+
+[Señalar la izquierda]
+
+Lo que ganamos: no perdemos eventos, una falla no tumba todo, crecer es sumar
+máquinas, los sistemas nuevos se conectan sin tocar a los demás y, si hay un error,
+podemos reprocesar la historia completa. Esto último lo vivimos: un error mandó 28
+eventos válidos a la zona de errores; lo corregimos y los volvimos a procesar desde
+el tablero. Nada se perdió.
+
+[Señalar la derecha]
+
+Lo que pagamos, y cómo lo mitigamos:
+- El estado no se actualiza en el mismo instante, sino una fracción de segundo
+  después. Lo medimos y la promesa es menos de 5 segundos.
+- Hay más piezas que operar. Por eso todo corre en contenedores y Kafka puede ser un
+  servicio administrado.
+- El paralelismo tiene un techo de 24 carriles, pero hoy tenemos margen de dos veces
+  sobre lo que necesitamos.
+- El equipo tiene que aprender. Por eso dejamos 12 decisiones documentadas, con lo que
+  descartamos y por qué, y un manual para la guardia.
+
+[Señalar las etiquetas rojas]
+
+¿Qué descartamos? Las llamadas directas entre sistemas, porque si uno cae arrastra a
+los demás, y las colas que no guardan historial, porque no permiten reprocesar.
+
+En resumen: pusimos complejidad solo donde el negocio la pide.
+
+
+----------------------------------------------------------------------
+10. DE LA IDEA A PRODUCCIÓN
+----------------------------------------------------------------------
+
+Tener un buen diseño no basta: hay que llevarlo a producción sin sustos.
+
+[Recorrer las flechas de izquierda a derecha]
+
+Cada cambio, por pequeño que sea, pasa por la misma cadena:
+el código se revisa, pasan 151 pruebas automáticas, se buscan vulnerabilidades, se
+arman los contenedores, se prueba el sistema completo, se ensaya en un ambiente igual
+al real y una persona aprueba. Recién entonces llega a producción, y ni siquiera de
+golpe: primero al 10 % del tráfico y, si algo sale mal, se revierte solo.
+
+[Señalar el calendario]
+
+Y hay una regla muy de logística: del 15 de noviembre al 10 de enero no se despliega
+nada, salvo una emergencia. En plena temporada pico no se hacen experimentos.
+
+Si empezáramos en septiembre, el plan sería:
+- Los dos primeros meses, construir las bases.
+- El tercer mes coincide con el pico, así que el sistema corre "en sombra": recibe
+  todo, calcula todo, pero todavía no manda. Sirve para comparar sin riesgo.
+- En enero, con la calma, hacemos la migración real, un sistema a la vez.
+
+Esto no quedó en el papel: lo probamos en local y también en la nube, con Kafka y
+PostgreSQL administrados. Mandamos 3.000 eventos y llegaron los 3.000.
+
+[Cierre]
+
+Y termino con la frase que resume todo el diseño: el éxito no es tener la tecnología
+más moderna, sino tener un sistema aburrido en temporada pico. Que en diciembre, cuando
+todo el país está comprando, nadie tenga que hablar de nosotros.
+
+
+----------------------------------------------------------------------
+SI TE HACEN PREGUNTAS, RESPUESTAS EN LENGUAJE SENCILLO
+----------------------------------------------------------------------
+
+¿Seguro que aguanta 5.000 eventos por segundo?
+  Está diseñado para eso y ya encontramos y corregimos el primer cuello de botella.
+  Pero, siendo honestos, las pruebas se hicieron en un portátil. Para certificarlo
+  hace falta probarlo en servidores dedicados, y el plan para hacerlo está escrito.
+
+¿No es demasiado complicado?
+  Cada pieza responde a un problema concreto: el tablero, a no perder ni desordenar;
+  el plan B, a la caída del tablero; los enchufes, a poder cambiar de tecnología. Lo
+  que no resolvía un problema real lo dejamos por fuera.
+
+¿Qué pasa si se cae la base de datos?
+  Seguimos recibiendo eventos, porque quedan en el tablero. El procesador espera y,
+  cuando la base vuelve, se pone al día en orden. Lo probamos.
+
+¿Cómo sabemos que no le llegan dos SMS iguales al cliente?
+  Cada aviso tiene una llave única: guía, versión del estado y canal. Si se intenta
+  mandar dos veces, se reconoce. Lo probamos reprocesando todo el tablero: cero SMS
+  repetidos.
+
+¿Por qué está hecho en .NET si en la empresa usan Java?
+  Porque las piezas se eligieron para que sean las mismas en los dos lenguajes: el
+  tablero, la base de datos, los contratos y las reglas de seguridad son iguales. La
+  versión en Java es el siguiente paso y reutiliza todo eso.

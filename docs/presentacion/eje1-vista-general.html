@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eje 1 · Vista general</title>
+<script src="acceso.js"></script>
+<script src="sesion.js"></script>
+<script>TCC.exigir()</script>
+<script src="reloj.js"></script>
+<style>
+  :root {
+    --fondo: #0b1016; --panel: #121a23; --panel2: #17212c; --borde: #243242; --texto: #dbe4ee; --tenue: #8a9bb0;
+    --azul: #4ea1ff; --naranja: #ff9f43; --verde: #3ddc97; --morado: #b388ff; --rojo: #ff6b6b; --gris: #6b7b8f; --amarillo: #ffd166;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 60px; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 17px/1.55 system-ui, "Segoe UI", Roboto, sans-serif; }
+  nav { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 4px; padding: 10px 20px;
+        background: rgba(11,16,22,.92); backdrop-filter: blur(6px); border-bottom: 1px solid var(--borde); overflow-x: auto; }
+  nav .marca { font-weight: 700; margin-right: 14px; white-space: nowrap; font-size: 15px; }
+  nav a { color: var(--tenue); text-decoration: none; padding: 5px 10px; border-radius: 6px; white-space: nowrap; font-size: 13px; }
+  nav a:hover, nav a.activo { color: var(--texto); background: var(--panel2); }
+  nav a.tec { margin-left: auto; color: var(--azul); border: 1px solid var(--borde); }
+  main { max-width: 1180px; margin: 0 auto; padding: 0 20px 60px; }
+  section { padding: 40px 0 34px; border-bottom: 1px solid var(--borde); min-height: 88vh; display: flex; flex-direction: column; justify-content: center; }
+  h1 { font-size: 36px; margin: 0 0 8px; line-height: 1.2; }
+  h2 { font-size: 28px; margin: 0 0 6px; display: flex; align-items: baseline; gap: 14px; }
+  h2 .num { font-family: var(--mono); color: var(--azul); font-size: 16px; }
+  .lead { color: var(--tenue); font-size: 18px; margin: 0 0 20px; max-width: 900px; }
+  .lead b { color: var(--texto); }
+  .diagrama { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 14px; }
+  .diagrama + .diagrama { margin-top: 12px; }
+  .pie-slide { display: flex; align-items: center; gap: 18px; margin-top: 18px; flex-wrap: wrap; }
+  .clave { flex: 1; min-width: 280px; border-left: 4px solid var(--verde); background: var(--panel); padding: 12px 16px; border-radius: 0 10px 10px 0; }
+  .clave b { color: var(--verde); }
+  .mas { color: var(--azul); text-decoration: none; border: 1px solid #1d4a7a; background: #0f2236; padding: 10px 16px; border-radius: 8px; white-space: nowrap; font-size: 15px; }
+  .mas:hover { background: #143152; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 18px; }
+  .kpi { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 16px; }
+  .kpi .v { font-size: 34px; font-weight: 800; font-family: var(--mono); line-height: 1.1; }
+  .kpi .l { color: var(--tenue); font-size: 14px; margin-top: 6px; }
+  .ok { color: var(--verde); } .az { color: var(--azul); } .na { color: var(--naranja); } .mo { color: var(--morado); } .am { color: var(--amarillo); }
+  .barra { display: flex; align-items: center; gap: 12px; margin: 10px 0; font-size: 15px; }
+  .barra .et { flex: 0 0 210px; color: var(--tenue); }
+  .barra .pista { flex: 1; background: var(--panel2); border-radius: 6px; height: 30px; overflow: hidden; }
+  .barra .relleno { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 10px; font-family: var(--mono); font-size: 14px; color: #081018; font-weight: 700; }
+  .balanza { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .plato { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 16px; }
+  .plato h3 { margin: 0 0 10px; font-size: 18px; }
+  .par { display: flex; align-items: center; gap: 10px; margin: 9px 0; font-size: 15px; }
+  .par .a { flex: 1; background: #2b2710; border: 1px solid #6b541f; border-radius: 8px; padding: 8px 11px; }
+  .par .b { flex: 1; background: #0f2c22; border: 1px solid #1f6b4f; border-radius: 8px; padding: 8px 11px; }
+  .par .flecha { color: var(--tenue); font-size: 20px; }
+  .chip { display: inline-block; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--borde); background: var(--panel2); margin: 4px 6px 4px 0; font-size: 14.5px; }
+  .chip.v { border-color: #1f6b4f; color: var(--verde); } .chip.r { border-color: #6b2a2a; color: var(--rojo); }
+  .pie { color: var(--gris); font-size: 13px; padding: 24px 0; text-align: center; }
+  svg text { font-family: system-ui, "Segoe UI", Roboto, sans-serif; }
+  .b-app{fill:#10243a;stroke:#4ea1ff;stroke-width:1.6} .b-kfk{fill:#33230f;stroke:#ff9f43;stroke-width:1.6} .b-db{fill:#0f2c22;stroke:#3ddc97;stroke-width:1.6}
+  .b-sec{fill:#241b38;stroke:#b388ff;stroke-width:1.6} .b-ext{fill:#161e27;stroke:#6b7b8f;stroke-width:1.6} .b-dlq{fill:#341616;stroke:#ff6b6b;stroke-width:1.6}
+  .b-am{fill:#2b2710;stroke:#ffd166;stroke-width:1.6} .b-fut{fill:none;stroke:#6b7b8f;stroke-width:1.6;stroke-dasharray:7 5} .b-plan{fill:#0f2c22;stroke:#3ddc97;stroke-width:1.6;stroke-dasharray:7 5}
+  .T{fill:#dbe4ee;font-size:17px;font-weight:700} .S{fill:#8a9bb0;font-size:13.5px} .E{fill:#8a9bb0;font-size:12.5px} .Tv{fill:#3ddc97;font-size:15px;font-weight:700} .Tr{fill:#ff6b6b;font-size:15px;font-weight:700} .Ta{fill:#ffd166;font-size:15px;font-weight:700}
+  .ln{stroke:#8a9bb0;stroke-width:2;fill:none} .ln.d{stroke-dasharray:6 5} .ln.v{stroke:#3ddc97} .ln.r{stroke:#ff6b6b} .ln.a{stroke:#ffd166}
+  @media (max-width: 800px) { .kpis { grid-template-columns: repeat(2, 1fr); } .balanza { grid-template-columns: 1fr; } section { min-height: 0; } }
+  @media print { nav { display: none; } section { min-height: 0; page-break-after: always; } body { background: #0b1016; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+
+<!-- flechas compartidas por todos los diagramas -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="f"  viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a9bb0"/></marker>
+    <marker id="fv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3ddc97"/></marker>
+    <marker id="fr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ff6b6b"/></marker>
+    <marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ffd166"/></marker>
+  </defs>
+</svg>
+
+<nav id="nav">
+  <span class="marca">TCC · Eje 1</span>
+  <a href="index.html" style="color:var(--azul);border:1px solid var(--borde)">⌂ Inicio</a>
+  <a href="#reto">El reto</a>
+  <a href="#componentes">Componentes</a>
+  <a href="#hexagonal">Hexagonal</a>
+  <a href="#flujo">Flujo</a>
+  <a href="#integraciones">Integraciones</a>
+  <a href="#cero-perdida">Cero pérdida</a>
+  <a href="#escalabilidad">Escalabilidad</a>
+  <a href="#observabilidad">Observabilidad</a>
+  <a href="#seguridad">Seguridad</a>
+  <a href="#decisiones">Decisiones</a>
+  <a href="#produccion">A producción</a>
+  <a class="tec" href="eje1-arquitectura.html">Versión técnica →</a>
+</nav>
+
+<main>
+
+<!-- ============ 0 · RETO ============ -->
+<section id="reto">
+  <h1>Plataforma de eventos de guías</h1>
+  <p class="lead">Varios sistemas reportan qué le pasa a cada envío. La plataforma <b>recibe</b> esos eventos, <b>actualiza el estado</b> de la guía y <b>avisa al cliente</b>, sin perder nada, incluso en temporada pico.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 300" width="100%" role="img" aria-label="Vista general del reto">
+    <text x="30" y="14" class="E">QUIENES REPORTAN</text>
+    <rect x="30" y="22"  width="160" height="40" rx="8" class="b-ext"/><text x="110" y="48" text-anchor="middle" class="S" style="fill:#dbe4ee">TMS</text>
+    <rect x="30" y="72"  width="160" height="40" rx="8" class="b-ext"/><text x="110" y="98" text-anchor="middle" class="S" style="fill:#dbe4ee">Transporte</text>
+    <rect x="30" y="122" width="160" height="40" rx="8" class="b-ext"/><text x="110" y="148" text-anchor="middle" class="S" style="fill:#dbe4ee">Internacional</text>
+    <rect x="30" y="172" width="160" height="40" rx="8" class="b-ext"/><text x="110" y="198" text-anchor="middle" class="S" style="fill:#dbe4ee">Automatización</text>
+    <path d="M190,42 L356,110"  class="ln" marker-end="url(#f)"/>
+    <path d="M190,92 L356,122"  class="ln" marker-end="url(#f)"/>
+    <path d="M190,142 L356,134" class="ln" marker-end="url(#f)"/>
+    <path d="M190,192 L356,146" class="ln" marker-end="url(#f)"/>
+
+    <rect x="360" y="70" width="280" height="120" rx="14" class="b-app"/>
+    <text x="500" y="112" text-anchor="middle" class="T">Plataforma de eventos</text>
+    <text x="500" y="138" text-anchor="middle" class="S">recibe · actualiza · avisa</text>
+    <text x="500" y="162" text-anchor="middle" class="E">19,2 M eventos/día · ráfagas de 5.000/s</text>
+
+    <path d="M640,110 L806,72"  class="ln" marker-end="url(#f)"/>
+    <path d="M640,150 L806,188" class="ln" marker-end="url(#f)"/>
+    <rect x="810" y="40"  width="160" height="64" rx="8" class="b-ext"/><text x="890" y="67" text-anchor="middle" class="T" style="font-size:15px">Cliente</text><text x="890" y="88" text-anchor="middle" class="E">SMS / correo</text>
+    <rect x="810" y="156" width="160" height="64" rx="8" class="b-ext"/><text x="890" y="183" text-anchor="middle" class="T" style="font-size:15px">Portal</text><text x="890" y="204" text-anchor="middle" class="E">¿dónde está mi envío?</text>
+
+    <rect x="105" y="240" width="250" height="44" rx="22" class="b-db"/><text x="230" y="267" text-anchor="middle" class="Tv">No perder ni un evento</text>
+    <rect x="375" y="240" width="250" height="44" rx="22" class="b-app"/><text x="500" y="267" text-anchor="middle" class="T" style="font-size:15px;fill:#4ea1ff">Estado visible en &lt; 5 s</text>
+    <rect x="645" y="240" width="250" height="44" rx="22" class="b-am"/><text x="770" y="267" text-anchor="middle" class="Ta">Aguantar ×4 en el pico</text>
+  </svg>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="v ok">0</div><div class="l">eventos perdidos de 138.375 aceptados en pruebas de carga</div></div>
+    <div class="kpi"><div class="v az">1</div><div class="l">efecto por evento, aunque llegue repetido o se procese 50 veces a la vez</div></div>
+    <div class="kpi"><div class="v am">×3,8</div><div class="l">más rendimiento tras encontrar y corregir el cuello de botella</div></div>
+    <div class="kpi"><div class="v">0,4 s</div><div class="l">desde que llega el evento hasta que el estado es visible</div></div>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> cada promesa de esta pantalla está medida en pruebas, no supuesta.</div>
+    <a class="mas" href="eje1-arquitectura.html#inicio">Ver supuestos y SLO →</a>
+  </div>
+</section>
+
+<!-- ============ 1 · COMPONENTES ============ -->
+<section id="componentes">
+  <h2><span class="num">01</span>Componentes</h2>
+  <p class="lead">Tres servicios pequeños conectados por <b>Kafka</b>, que funciona como un tablero de anuncios: quien publica no necesita saber quién lee. Si una pieza falla, las demás siguen.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 330" width="100%" role="img" aria-label="Componentes a alto nivel">
+    <rect x="210" y="6" width="140" height="32" rx="16" class="b-sec"/><text x="280" y="27" text-anchor="middle" class="S" style="fill:#b388ff">Keycloak · el pase</text>
+    <path d="M280,38 V58" class="ln d" marker-end="url(#f)"/>
+
+    <rect x="20"  y="60" width="150" height="80" rx="10" class="b-ext"/><text x="95" y="96" text-anchor="middle" class="T">Emisores</text><text x="95" y="118" text-anchor="middle" class="S">TMS, transporte…</text>
+    <path d="M170,100 H198" class="ln" marker-end="url(#f)"/>
+    <rect x="200" y="60" width="160" height="80" rx="10" class="b-app"/><text x="280" y="96" text-anchor="middle" class="T">API</text><text x="280" y="118" text-anchor="middle" class="S">la puerta de entrada</text>
+    <path d="M360,100 H398" class="ln" marker-end="url(#f)"/>
+    <rect x="400" y="60" width="170" height="80" rx="10" class="b-kfk"/><text x="485" y="96" text-anchor="middle" class="T">Kafka</text><text x="485" y="118" text-anchor="middle" class="S">eventos recibidos</text>
+    <path d="M570,100 H608" class="ln" marker-end="url(#f)"/>
+    <rect x="610" y="60" width="160" height="80" rx="10" class="b-app"/><text x="690" y="96" text-anchor="middle" class="T">Procesador</text><text x="690" y="118" text-anchor="middle" class="S">decide el estado</text>
+    <path d="M770,100 H818" class="ln" marker-end="url(#f)"/>
+    <rect x="820" y="60" width="160" height="80" rx="10" class="b-db"/><text x="900" y="96" text-anchor="middle" class="T">PostgreSQL</text><text x="900" y="118" text-anchor="middle" class="S">estado e historial</text>
+
+    <path d="M900,140 V228" class="ln" marker-end="url(#f)"/><text x="890" y="190" text-anchor="end" class="E">anuncia el cambio</text>
+    <rect x="820" y="230" width="160" height="80" rx="10" class="b-kfk"/><text x="900" y="266" text-anchor="middle" class="T">Kafka</text><text x="900" y="288" text-anchor="middle" class="S">estados cambiados</text>
+    <path d="M820,270 H772" class="ln" marker-end="url(#f)"/>
+    <rect x="610" y="230" width="160" height="80" rx="10" class="b-app"/><text x="690" y="266" text-anchor="middle" class="T">Notificador</text><text x="690" y="288" text-anchor="middle" class="S">decide si avisar</text>
+    <path d="M610,270 H572" class="ln" marker-end="url(#f)"/>
+    <rect x="400" y="230" width="170" height="80" rx="10" class="b-ext"/><text x="485" y="266" text-anchor="middle" class="T">Cliente</text><text x="485" y="288" text-anchor="middle" class="S">SMS o correo</text>
+
+    <path d="M250,140 V228" class="ln d" marker-end="url(#f)"/><text x="160" y="190" class="E">si Kafka falla</text>
+    <rect x="170" y="230" width="170" height="80" rx="10" class="b-plan"/><text x="255" y="266" text-anchor="middle" class="T">Plan B</text><text x="255" y="288" text-anchor="middle" class="S">guarda en PostgreSQL</text>
+    <path d="M340,236 L420,144" class="ln d" marker-end="url(#f)"/><text x="400" y="204" class="E">reenvía al volver</text>
+  </svg>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> si el proveedor de SMS se cae, solo se atrasan los avisos; la recepción y el rastreo siguen funcionando.</div>
+    <a class="mas" href="eje1-arquitectura.html#componentes">Ver detalle técnico →</a>
+  </div>
+</section>
+
+<!-- ============ 2 · HEXAGONAL ============ -->
+<section id="hexagonal">
+  <h2><span class="num">02</span>Arquitectura hexagonal</h2>
+  <p class="lead">Por dentro, cada servicio se organiza como una cebolla: en el centro, <b>las reglas del negocio</b>; alrededor, los casos de uso; y en el borde, la tecnología, que se <b>enchufa</b> como un accesorio.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 380" width="100%" role="img" aria-label="Arquitectura hexagonal a alto nivel">
+    <text x="40" y="118" class="E">ENTRAN</text>
+    <rect x="40" y="128" width="150" height="46" rx="8" class="b-ext"/><text x="115" y="157" text-anchor="middle" class="S" style="fill:#dbe4ee">Petición HTTP</text>
+    <rect x="40" y="204" width="150" height="46" rx="8" class="b-ext"/><text x="115" y="233" text-anchor="middle" class="S" style="fill:#dbe4ee">Mensaje de Kafka</text>
+    <path d="M190,151 H248" class="ln" marker-end="url(#f)"/>
+    <path d="M190,227 H248" class="ln" marker-end="url(#f)"/>
+
+    <rect x="250" y="20" width="500" height="340" rx="22" class="b-ext" style="fill:#121a23"/>
+    <text x="500" y="46" text-anchor="middle" class="S">ADAPTADORES · aquí vive la tecnología</text>
+    <rect x="320" y="64" width="360" height="252" rx="18" class="b-app"/>
+    <text x="500" y="90" text-anchor="middle" class="S" style="fill:#4ea1ff">APLICACIÓN · recibir, procesar, notificar</text>
+    <rect x="390" y="120" width="220" height="130" rx="16" class="b-db"/>
+    <text x="500" y="164" text-anchor="middle" class="T" style="fill:#3ddc97">Dominio</text>
+    <text x="500" y="190" text-anchor="middle" class="S">reglas del negocio</text>
+    <text x="500" y="212" text-anchor="middle" class="S">máquina de estados</text>
+    <text x="500" y="234" text-anchor="middle" class="E">no conoce ninguna tecnología</text>
+    <text x="500" y="298" text-anchor="middle" class="E">habla solo con "enchufes" (puertos) <tspan fill="#ff9f43">●</tspan></text>
+    <text x="500" y="345" text-anchor="middle" class="E">las dependencias siempre apuntan hacia el centro</text>
+
+    <circle cx="680" cy="110" r="8" fill="#ff9f43"/><circle cx="680" cy="170" r="8" fill="#ff9f43"/>
+    <circle cx="680" cy="230" r="8" fill="#ff9f43"/><circle cx="680" cy="290" r="8" fill="#ff9f43"/>
+    <path d="M688,110 H808" class="ln d" marker-end="url(#f)"/>
+    <path d="M688,170 H808" class="ln d" marker-end="url(#f)"/>
+    <path d="M688,230 H808" class="ln d" marker-end="url(#f)"/>
+    <path d="M688,290 H808" class="ln d" marker-end="url(#f)"/>
+
+    <text x="810" y="76" class="E">SE ENCHUFAN</text>
+    <rect x="810" y="88"  width="160" height="44" rx="8" class="b-kfk"/><text x="890" y="116" text-anchor="middle" class="S" style="fill:#dbe4ee">Kafka</text>
+    <rect x="810" y="148" width="160" height="44" rx="8" class="b-db"/><text x="890" y="176" text-anchor="middle" class="S" style="fill:#dbe4ee">PostgreSQL</text>
+    <rect x="810" y="208" width="160" height="44" rx="8" class="b-db"/><text x="890" y="236" text-anchor="middle" class="S" style="fill:#dbe4ee">Redis</text>
+    <rect x="810" y="268" width="160" height="44" rx="8" class="b-ext"/><text x="890" y="296" text-anchor="middle" class="S" style="fill:#dbe4ee">SMS / correo</text>
+  </svg>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> cambiar Kafka, la base de datos o el proveedor de SMS no toca las reglas del negocio, y una prueba automática impide romper esa regla.</div>
+    <a class="mas" href="eje1-arquitectura.html#hexagonal">Ver puertos y adaptadores →</a>
+  </div>
+</section>
+
+<!-- ============ 3 · FLUJO ============ -->
+<section id="flujo">
+  <h2><span class="num">03</span>El viaje de un evento</h2>
+  <p class="lead">Cinco pasos desde que un sistema reporta "en reparto" hasta que al cliente le llega el mensaje. Cada paso <b>se confirma antes de pasar al siguiente</b>.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 350" width="100%" role="img" aria-label="Flujo de un evento">
+    <path d="M100,60 H900" class="ln" style="stroke:#243242;stroke-width:4"/>
+    <g>
+      <circle cx="100" cy="60" r="28" class="b-app"/><text x="100" y="67" text-anchor="middle" class="T">1</text>
+      <circle cx="300" cy="60" r="28" class="b-kfk"/><text x="300" y="67" text-anchor="middle" class="T">2</text>
+      <circle cx="500" cy="60" r="28" class="b-db"/><text x="500" y="67" text-anchor="middle" class="T">3</text>
+      <circle cx="700" cy="60" r="28" class="b-kfk"/><text x="700" y="67" text-anchor="middle" class="T">4</text>
+      <circle cx="900" cy="60" r="28" class="b-app"/><text x="900" y="67" text-anchor="middle" class="T">5</text>
+    </g>
+    <text x="100" y="118" text-anchor="middle" class="T" style="font-size:15px">Llega</text>
+    <text x="100" y="140" text-anchor="middle" class="S">la API revisa el pase</text><text x="100" y="158" text-anchor="middle" class="S">y el formato</text>
+    <text x="300" y="118" text-anchor="middle" class="T" style="font-size:15px">Queda a salvo</text>
+    <text x="300" y="140" text-anchor="middle" class="S">3 copias en Kafka</text><text x="300" y="158" text-anchor="middle" class="S">→ recién ahí "recibido"</text>
+    <text x="500" y="118" text-anchor="middle" class="T" style="font-size:15px">Cambia el estado</text>
+    <text x="500" y="140" text-anchor="middle" class="S">historial + estado +</text><text x="500" y="158" text-anchor="middle" class="S">anuncio, todo o nada</text>
+    <text x="700" y="118" text-anchor="middle" class="T" style="font-size:15px">Se anuncia</text>
+    <text x="700" y="140" text-anchor="middle" class="S">solo lo que quedó</text><text x="700" y="158" text-anchor="middle" class="S">guardado, en orden</text>
+    <text x="900" y="118" text-anchor="middle" class="T" style="font-size:15px">Se avisa</text>
+    <text x="900" y="140" text-anchor="middle" class="S">SMS o correo,</text><text x="900" y="158" text-anchor="middle" class="S">una sola vez</text>
+    <text x="500" y="28" text-anchor="middle" class="E">≈ 0,4 segundos de punta a punta</text>
+
+    <text x="30" y="210" class="E">LA VIDA DE UNA GUÍA</text>
+    <rect x="30"  y="222" width="120" height="38" rx="19" class="b-ext"/><text x="90"  y="246" text-anchor="middle" class="S" style="fill:#dbe4ee">Creada</text>
+    <rect x="185" y="222" width="120" height="38" rx="19" class="b-ext"/><text x="245" y="246" text-anchor="middle" class="S" style="fill:#dbe4ee">Recogida</text>
+    <rect x="340" y="222" width="120" height="38" rx="19" class="b-ext"/><text x="400" y="246" text-anchor="middle" class="S" style="fill:#dbe4ee">En bodega</text>
+    <rect x="495" y="222" width="120" height="38" rx="19" class="b-ext"/><text x="555" y="246" text-anchor="middle" class="S" style="fill:#dbe4ee">En tránsito</text>
+    <rect x="650" y="222" width="120" height="38" rx="19" class="b-ext"/><text x="710" y="246" text-anchor="middle" class="S" style="fill:#dbe4ee">En reparto</text>
+    <rect x="805" y="222" width="160" height="38" rx="19" class="b-db"/><text x="885" y="246" text-anchor="middle" class="Tv">Entregada ✔</text>
+    <path d="M150,241 H183" class="ln" marker-end="url(#f)"/>
+    <path d="M305,241 H338" class="ln" marker-end="url(#f)"/>
+    <path d="M460,241 H493" class="ln" marker-end="url(#f)"/>
+    <path d="M615,241 H648" class="ln" marker-end="url(#f)"/>
+    <path d="M770,241 H803" class="ln" marker-end="url(#f)"/>
+    <rect x="590" y="295" width="130" height="38" rx="19" class="b-dlq"/><text x="655" y="319" text-anchor="middle" class="Tr">Novedad</text>
+    <path d="M690,260 L668,293" class="ln r" marker-end="url(#fr)"/>
+    <path d="M720,314 H800" class="ln" marker-end="url(#f)"/><text x="808" y="310" class="S">reintento de entrega</text><text x="808" y="328" class="S">o devolución</text>
+  </svg>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> un evento viejo que llega tarde no hace retroceder el estado; queda en el historial para auditoría.</div>
+    <a class="mas" href="eje1-arquitectura.html#flujo">Ver los 8 pasos y la máquina de estados →</a>
+  </div>
+</section>
+
+<!-- ============ 4 · INTEGRACIONES ============ -->
+<section id="integraciones">
+  <h2><span class="num">04</span>Integraciones entre sistemas</h2>
+  <p class="lead">Todos los que reportan entran por <b>una sola puerta</b> con el mismo contrato. Todos los que necesitan enterarse <b>se suscriben</b> a Kafka, y cada uno lee a su propio ritmo.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 360" width="100%" role="img" aria-label="Integraciones entre sistemas">
+    <text x="30" y="30" class="E">PRODUCEN (escriben)</text>
+    <rect x="30" y="42"  width="170" height="50" rx="8" class="b-ext"/><text x="115" y="72" text-anchor="middle" class="S" style="fill:#dbe4ee">TMS</text>
+    <rect x="30" y="112" width="170" height="50" rx="8" class="b-ext"/><text x="115" y="142" text-anchor="middle" class="S" style="fill:#dbe4ee">Transporte (app)</text>
+    <rect x="30" y="182" width="170" height="50" rx="8" class="b-ext"/><text x="115" y="212" text-anchor="middle" class="S" style="fill:#dbe4ee">Internacional</text>
+    <rect x="30" y="252" width="170" height="50" rx="8" class="b-ext"/><text x="115" y="282" text-anchor="middle" class="S" style="fill:#dbe4ee">Automatización</text>
+    <path d="M200,67 L266,160"  class="ln" marker-end="url(#f)"/>
+    <path d="M200,137 L266,168" class="ln" marker-end="url(#f)"/>
+    <path d="M200,207 L266,180" class="ln" marker-end="url(#f)"/>
+    <path d="M200,277 L266,190" class="ln" marker-end="url(#f)"/>
+
+    <rect x="270" y="130" width="130" height="80" rx="10" class="b-app"/><text x="335" y="164" text-anchor="middle" class="T">API</text><text x="335" y="186" text-anchor="middle" class="S">contrato V1</text>
+    <path d="M400,170 H448" class="ln" marker-end="url(#f)"/>
+    <rect x="450" y="90" width="160" height="160" rx="12" class="b-kfk"/>
+    <text x="530" y="160" text-anchor="middle" class="T">Kafka</text><text x="530" y="184" text-anchor="middle" class="S">tablero de</text><text x="530" y="202" text-anchor="middle" class="S">anuncios</text>
+
+    <text x="700" y="22" class="E">CONSUMEN (se suscriben)</text>
+    <path d="M610,150 L698,55"  class="ln" marker-end="url(#f)"/>
+    <path d="M610,160 L698,120" class="ln" marker-end="url(#f)"/>
+    <path d="M610,175 L698,185" class="ln d" marker-end="url(#f)"/>
+    <path d="M610,185 L698,250" class="ln d" marker-end="url(#f)"/>
+    <path d="M610,195 L698,315" class="ln d" marker-end="url(#f)"/>
+    <rect x="700" y="32"  width="270" height="48" rx="8" class="b-app"/><text x="835" y="61" text-anchor="middle" class="S" style="fill:#dbe4ee">Procesador de estado</text>
+    <rect x="700" y="97"  width="270" height="48" rx="8" class="b-app"/><text x="835" y="126" text-anchor="middle" class="S" style="fill:#dbe4ee">Notificador al cliente</text>
+    <rect x="700" y="162" width="270" height="48" rx="8" class="b-fut"/><text x="835" y="191" text-anchor="middle" class="S">Documental (pruebas de entrega)</text>
+    <rect x="700" y="227" width="270" height="48" rx="8" class="b-fut"/><text x="835" y="256" text-anchor="middle" class="S">Agente IA de novedades</text>
+    <rect x="700" y="292" width="270" height="48" rx="8" class="b-fut"/><text x="835" y="321" text-anchor="middle" class="S">Futuras integraciones</text>
+
+    <path d="M30,330 H60" class="ln"/><text x="68" y="335" class="E">construido</text>
+    <path d="M160,330 H190" class="ln d"/><text x="198" y="335" class="E">diseñado: se suma sin tocar a nadie</text>
+  </svg>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> agregar un sistema nuevo es sumar un suscriptor; si uno se atrasa, no frena a los demás.</div>
+    <a class="mas" href="eje1-arquitectura.html#integraciones">Ver sistemas, clientes y contrato →</a>
+  </div>
+</section>
+
+<!-- ============ 5 · CERO PERDIDA ============ -->
+<section id="cero-perdida">
+  <h2><span class="num">05</span>Cómo no se pierde ningún evento</h2>
+  <p class="lead">La regla de oro: <b>nunca decimos "recibido" si no está guardado</b>. Hay tres caminos posibles y en ninguno se pierde el evento.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 340" width="100%" role="img" aria-label="Caminos para no perder eventos">
+    <rect x="30" y="140" width="140" height="60" rx="10" class="b-app"/><text x="100" y="176" text-anchor="middle" class="T">Evento</text>
+    <path d="M170,160 L256,70"  class="ln v" marker-end="url(#fv)"/>
+    <path d="M170,170 L256,170" class="ln a" marker-end="url(#fa)"/>
+    <path d="M170,180 L256,270" class="ln r" marker-end="url(#fr)"/>
+
+    <rect x="260" y="40"  width="250" height="60" rx="10" class="b-db"/><text x="385" y="67" text-anchor="middle" class="Tv">Kafka responde</text><text x="385" y="88" text-anchor="middle" class="E">el camino normal</text>
+    <rect x="260" y="140" width="250" height="60" rx="10" class="b-am"/><text x="385" y="167" text-anchor="middle" class="Ta">Kafka no responde</text><text x="385" y="188" text-anchor="middle" class="E">el plan B</text>
+    <rect x="260" y="240" width="250" height="60" rx="10" class="b-dlq"/><text x="385" y="267" text-anchor="middle" class="Tr">Tampoco hay base</text><text x="385" y="288" text-anchor="middle" class="E">caso extremo</text>
+
+    <path d="M510,70  H568" class="ln v" marker-end="url(#fv)"/>
+    <path d="M510,170 H568" class="ln a" marker-end="url(#fa)"/>
+    <path d="M510,270 H568" class="ln r" marker-end="url(#fr)"/>
+
+    <rect x="570" y="40"  width="400" height="60" rx="10" class="b-ext"/><text x="590" y="67" class="T" style="font-size:15px">"Recibido" ✔  guardado con 3 copias</text><text x="590" y="88" class="E">responde 202</text>
+    <rect x="570" y="140" width="400" height="60" rx="10" class="b-ext"/><text x="590" y="167" class="T" style="font-size:15px">"Recibido" ✔  guardado en PostgreSQL</text><text x="590" y="188" class="E">se reenvía solo cuando Kafka vuelve</text>
+    <rect x="570" y="240" width="400" height="60" rx="10" class="b-ext"/><text x="590" y="267" class="T" style="font-size:15px">"Intenta de nuevo"  (503)</text><text x="590" y="288" class="E">el emisor lo guarda y reintenta: sigue sin perderse</text>
+  </svg>
+  </div>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 200" width="100%" role="img" aria-label="Duplicados y reintentos">
+    <text x="30" y="24" class="E">SI LLEGA REPETIDO</text>
+    <rect x="30" y="36" width="130" height="44" rx="8" class="b-app"/><text x="95" y="63" text-anchor="middle" class="S" style="fill:#dbe4ee">evento #123</text>
+    <rect x="30" y="90" width="130" height="44" rx="8" class="b-app"/><text x="95" y="117" text-anchor="middle" class="S" style="fill:#dbe4ee">evento #123</text>
+    <path d="M160,58 L226,80"  class="ln" marker-end="url(#f)"/>
+    <path d="M160,112 L226,92" class="ln" marker-end="url(#f)"/>
+    <rect x="230" y="60" width="160" height="54" rx="8" class="b-db"/><text x="310" y="84" text-anchor="middle" class="S" style="fill:#dbe4ee">la base lo reconoce</text><text x="310" y="102" text-anchor="middle" class="E">por su número</text>
+    <path d="M390,87 H428" class="ln v" marker-end="url(#fv)"/>
+    <text x="436" y="93" class="Tv">1 solo efecto</text>
+    <text x="30" y="170" class="E">Probado: 50 copias procesadas a la vez → 1 fila</text>
+
+    <path d="M560,20 V190" style="stroke:#243242;stroke-width:2"/>
+
+    <text x="590" y="24" class="E">SI EL SMS FALLA, SE APARTA Y SE SIGUE</text>
+    <rect x="590" y="40" width="80" height="40" rx="8" class="b-dlq"/><text x="630" y="65" text-anchor="middle" class="S" style="fill:#ff6b6b">SMS ✗</text>
+    <path d="M670,60 H688" class="ln" marker-end="url(#f)"/>
+    <rect x="690" y="40" width="70" height="40" rx="8" class="b-am"/><text x="725" y="65" text-anchor="middle" class="S" style="fill:#ffd166">1 min</text>
+    <path d="M760,60 H778" class="ln" marker-end="url(#f)"/>
+    <rect x="780" y="40" width="70" height="40" rx="8" class="b-am"/><text x="815" y="65" text-anchor="middle" class="S" style="fill:#ffd166">10 min</text>
+    <path d="M850,60 H868" class="ln" marker-end="url(#f)"/>
+    <rect x="870" y="40" width="50" height="40" rx="8" class="b-am"/><text x="895" y="65" text-anchor="middle" class="S" style="fill:#ffd166">1 h</text>
+    <path d="M895,80 V108" class="ln" marker-end="url(#f)"/>
+    <rect x="830" y="110" width="130" height="40" rx="8" class="b-db"/><text x="895" y="135" text-anchor="middle" class="S" style="fill:#3ddc97">correo ✔</text>
+    <text x="590" y="120" class="S">Las demás guías</text><text x="590" y="140" class="S">no esperan.</text>
+    <text x="590" y="170" class="E">En el procesador, en cambio, se espera: el orden importa.</text>
+  </svg>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> 138.375 aceptados = 138.375 guardados, incluso apagando el procesador a la fuerza en plena carga.</div>
+    <a class="mas" href="eje1-arquitectura.html#cero-perdida">Ver capas, reintentos y reconciliación →</a>
+  </div>
+</section>
+
+<!-- ============ 6 · ESCALABILIDAD ============ -->
+<section id="escalabilidad">
+  <h2><span class="num">06</span>Escalabilidad</h2>
+  <p class="lead">Kafka divide el trabajo en <b>24 carriles</b> (particiones). Todos los eventos de una misma guía van siempre por el mismo carril, así conservan su orden; y los carriles avanzan en paralelo.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 300" width="100%" role="img" aria-label="Carriles de Kafka e instancias">
+    <text x="30" y="30" class="E">GUÍAS</text>
+    <rect x="30" y="44"  width="120" height="40" rx="20" class="b-ext"/><text x="90" y="69"  text-anchor="middle" class="S" style="fill:#dbe4ee">Guía A</text>
+    <rect x="30" y="124" width="120" height="40" rx="20" class="b-ext"/><text x="90" y="149" text-anchor="middle" class="S" style="fill:#dbe4ee">Guía B</text>
+    <rect x="30" y="204" width="120" height="40" rx="20" class="b-ext"/><text x="90" y="229" text-anchor="middle" class="S" style="fill:#dbe4ee">Guía C</text>
+    <path d="M150,64 L228,56"   class="ln" marker-end="url(#f)"/>
+    <path d="M150,144 L228,142" class="ln" marker-end="url(#f)"/>
+    <path d="M150,224 L228,228" class="ln" marker-end="url(#f)"/>
+
+    <text x="230" y="30" class="E">CARRILES DE KAFKA (6 de 24)</text>
+    <g>
+      <rect x="230" y="42"  width="400" height="28" rx="6" class="b-kfk"/>
+      <rect x="230" y="85"  width="400" height="28" rx="6" class="b-kfk"/>
+      <rect x="230" y="128" width="400" height="28" rx="6" class="b-kfk"/>
+      <rect x="230" y="171" width="400" height="28" rx="6" class="b-kfk"/>
+      <rect x="230" y="214" width="400" height="28" rx="6" class="b-kfk"/>
+      <rect x="230" y="257" width="400" height="28" rx="6" class="b-kfk"/>
+      <g fill="#ff9f43">
+        <rect x="560" y="49" width="14" height="14" rx="3"/><rect x="580" y="49" width="14" height="14" rx="3"/><rect x="600" y="49" width="14" height="14" rx="3"/>
+        <rect x="580" y="92" width="14" height="14" rx="3"/><rect x="600" y="92" width="14" height="14" rx="3"/>
+        <rect x="540" y="135" width="14" height="14" rx="3"/><rect x="560" y="135" width="14" height="14" rx="3"/><rect x="580" y="135" width="14" height="14" rx="3"/><rect x="600" y="135" width="14" height="14" rx="3"/>
+        <rect x="600" y="178" width="14" height="14" rx="3"/>
+        <rect x="560" y="221" width="14" height="14" rx="3"/><rect x="580" y="221" width="14" height="14" rx="3"/><rect x="600" y="221" width="14" height="14" rx="3"/>
+        <rect x="580" y="264" width="14" height="14" rx="3"/><rect x="600" y="264" width="14" height="14" rx="3"/>
+      </g>
+    </g>
+    <path d="M630,56 L728,90"   class="ln" marker-end="url(#f)"/>
+    <path d="M630,99 L728,100"  class="ln" marker-end="url(#f)"/>
+    <path d="M630,142 L728,110" class="ln" marker-end="url(#f)"/>
+    <path d="M630,185 L728,200" class="ln" marker-end="url(#f)"/>
+    <path d="M630,228 L728,210" class="ln" marker-end="url(#f)"/>
+    <path d="M630,271 L728,220" class="ln" marker-end="url(#f)"/>
+
+    <rect x="730" y="60"  width="240" height="90" rx="10" class="b-app"/><text x="850" y="96"  text-anchor="middle" class="T">Procesador 1</text><text x="850" y="120" text-anchor="middle" class="S">1 trabajador por carril</text>
+    <rect x="730" y="170" width="240" height="90" rx="10" class="b-app"/><text x="850" y="206" text-anchor="middle" class="T">Procesador 2</text><text x="850" y="230" text-anchor="middle" class="S">se suma otro si hay atraso</text>
+  </svg>
+  </div>
+
+  <div class="diagrama">
+    <div class="barra"><span class="et">Antes (uno a la vez)</span><div class="pista"><div class="relleno" style="width:26%;background:var(--gris)">90 eventos/s</div></div></div>
+    <div class="barra"><span class="et">Después (por carril)</span><div class="pista"><div class="relleno" style="width:100%;background:var(--verde)">343 eventos/s · ×3,8</div></div></div>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> el cuello de botella no se supuso: la prueba de carga lo mostró, se corrigió y se volvió a medir.</div>
+    <a class="mas" href="eje1-arquitectura.html#escalabilidad">Ver escalado, mediciones y límites →</a>
+  </div>
+</section>
+
+<!-- ============ 7 · OBSERVABILIDAD ============ -->
+<section id="observabilidad">
+  <h2><span class="num">07</span>Observabilidad</h2>
+  <p class="lead">Para saber qué pasa adentro usamos tres lentes: <b>el recorrido</b> de cada evento, <b>los signos vitales</b> del sistema y <b>el diario</b> de lo que ocurrió. Todo se ve en una sola pantalla.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 300" width="100%" role="img" aria-label="Observabilidad">
+    <rect x="30" y="50"  width="150" height="50" rx="8" class="b-app"/><text x="105" y="80"  text-anchor="middle" class="S" style="fill:#dbe4ee">API</text>
+    <rect x="30" y="120" width="150" height="50" rx="8" class="b-app"/><text x="105" y="150" text-anchor="middle" class="S" style="fill:#dbe4ee">Procesador</text>
+    <rect x="30" y="190" width="150" height="50" rx="8" class="b-app"/><text x="105" y="220" text-anchor="middle" class="S" style="fill:#dbe4ee">Notificador</text>
+    <path d="M180,75 L256,132"  class="ln" marker-end="url(#f)"/>
+    <path d="M180,145 L256,145" class="ln" marker-end="url(#f)"/>
+    <path d="M180,215 L256,158" class="ln" marker-end="url(#f)"/>
+
+    <rect x="260" y="105" width="160" height="80" rx="10" class="b-ext"/><text x="340" y="140" text-anchor="middle" class="T" style="font-size:15px">Collector</text><text x="340" y="162" text-anchor="middle" class="E">OpenTelemetry</text>
+    <path d="M420,130 L496,72"  class="ln" marker-end="url(#f)"/>
+    <path d="M420,145 L496,145" class="ln" marker-end="url(#f)"/>
+    <path d="M420,160 L496,218" class="ln" marker-end="url(#f)"/>
+
+    <rect x="500" y="40"  width="220" height="64" rx="10" class="b-sec"/><text x="610" y="68"  text-anchor="middle" class="T" style="font-size:15px">Trazas · Jaeger</text><text x="610" y="90"  text-anchor="middle" class="E">el recorrido de cada evento</text>
+    <rect x="500" y="113" width="220" height="64" rx="10" class="b-kfk"/><text x="610" y="141" text-anchor="middle" class="T" style="font-size:15px">Métricas · Prometheus</text><text x="610" y="163" text-anchor="middle" class="E">los signos vitales</text>
+    <rect x="500" y="186" width="220" height="64" rx="10" class="b-db"/><text x="610" y="214" text-anchor="middle" class="T" style="font-size:15px">Logs · Loki</text><text x="610" y="236" text-anchor="middle" class="E">el diario, enlazado a su traza</text>
+
+    <path d="M720,72 L796,130"  class="ln" marker-end="url(#f)"/>
+    <path d="M720,145 L796,145" class="ln" marker-end="url(#f)"/>
+    <path d="M720,218 L796,160" class="ln" marker-end="url(#f)"/>
+    <rect x="800" y="105" width="170" height="80" rx="10" class="b-app"/><text x="885" y="140" text-anchor="middle" class="T">Grafana</text><text x="885" y="162" text-anchor="middle" class="E">una sola pantalla</text>
+    <path d="M885,185 V228" class="ln r" marker-end="url(#fr)"/>
+    <rect x="800" y="230" width="170" height="44" rx="22" class="b-dlq"/><text x="885" y="257" text-anchor="middle" class="Tr" style="font-size:13.5px">Alertas → guardia</text><text x="885" y="290" text-anchor="middle" class="E">las dispara Prometheus</text>
+  </svg>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> las alarmas suenan cuando se incumple una promesa al cliente (por ejemplo, estado en más de 5 s), no por cualquier ruido.</div>
+    <a class="mas" href="eje1-arquitectura.html#observabilidad">Ver alertas y métricas →</a>
+  </div>
+</section>
+
+<!-- ============ 8 · SEGURIDAD ============ -->
+<section id="seguridad">
+  <h2><span class="num">08</span>Seguridad</h2>
+  <p class="lead">Cada petición pasa por <b>cuatro controles</b>, como en un aeropuerto. Si falla uno, se detiene ahí y recibe una respuesta clara.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 270" width="100%" role="img" aria-label="Controles de seguridad">
+    <rect x="20" y="60" width="120" height="56" rx="10" class="b-ext"/><text x="80" y="93" text-anchor="middle" class="S" style="fill:#dbe4ee">Petición</text>
+
+    <path d="M140,88 H178" class="ln" marker-end="url(#f)"/>
+    <rect x="180" y="40" width="150" height="96" rx="10" class="b-sec"/><text x="255" y="72" text-anchor="middle" class="T" style="font-size:15px">¿Tiene pase?</text><text x="255" y="94" text-anchor="middle" class="E">token de Keycloak</text><text x="255" y="112" text-anchor="middle" class="E">vigente y firmado</text>
+    <path d="M330,88 H368" class="ln" marker-end="url(#f)"/>
+    <rect x="370" y="40" width="150" height="96" rx="10" class="b-sec"/><text x="445" y="72" text-anchor="middle" class="T" style="font-size:15px">¿Tiene permiso?</text><text x="445" y="94" text-anchor="middle" class="E">escribir eventos /</text><text x="445" y="112" text-anchor="middle" class="E">leer guías</text>
+    <path d="M520,88 H558" class="ln" marker-end="url(#f)"/>
+    <rect x="560" y="40" width="150" height="96" rx="10" class="b-sec"/><text x="635" y="72" text-anchor="middle" class="T" style="font-size:15px">¿Es quien dice?</text><text x="635" y="94" text-anchor="middle" class="E">TMS no puede</text><text x="635" y="112" text-anchor="middle" class="E">hablar por otro</text>
+    <path d="M710,88 H748" class="ln" marker-end="url(#f)"/>
+    <rect x="750" y="40" width="130" height="96" rx="10" class="b-sec"/><text x="815" y="72" text-anchor="middle" class="T" style="font-size:15px">¿No abusa?</text><text x="815" y="94" text-anchor="middle" class="E">límite de</text><text x="815" y="112" text-anchor="middle" class="E">peticiones</text>
+    <path d="M880,88 H918" class="ln v" marker-end="url(#fv)"/>
+    <text x="925" y="94" class="Tv">Pasa ✔</text>
+
+    <path d="M255,136 V178" class="ln r" marker-end="url(#fr)"/><rect x="205" y="180" width="100" height="36" rx="18" class="b-dlq"/><text x="255" y="203" text-anchor="middle" class="Tr">401</text>
+    <path d="M445,136 V178" class="ln r" marker-end="url(#fr)"/><rect x="395" y="180" width="100" height="36" rx="18" class="b-dlq"/><text x="445" y="203" text-anchor="middle" class="Tr">403</text>
+    <path d="M635,136 V178" class="ln r" marker-end="url(#fr)"/><rect x="585" y="180" width="100" height="36" rx="18" class="b-dlq"/><text x="635" y="203" text-anchor="middle" class="Tr">403</text>
+    <path d="M815,136 V178" class="ln r" marker-end="url(#fr)"/><rect x="765" y="180" width="100" height="36" rx="18" class="b-dlq"/><text x="815" y="203" text-anchor="middle" class="Tr">429</text>
+    <text x="500" y="252" text-anchor="middle" class="E">Los cuatro controles se probaron contra Keycloak real, incluido un token alterado.</text>
+  </svg>
+  </div>
+  <div style="margin-top:14px">
+    <span class="chip v">Sin teléfono ni correo en el evento (Ley 1581)</span>
+    <span class="chip v">Datos enmascarados en los logs</span>
+    <span class="chip v">Contenedores sin shell ni root</span>
+    <span class="chip v">Conexiones cifradas (TLS)</span>
+    <span class="chip v">Escaneo de vulnerabilidades en cada cambio</span>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> no basta con saber quién llama; también se controla <b>de qué</b> puede hablar, para que nadie falsee el historial de una guía.</div>
+    <a class="mas" href="eje1-arquitectura.html#seguridad">Ver controles y verificación →</a>
+  </div>
+</section>
+
+<!-- ============ 9 · DECISIONES ============ -->
+<section id="decisiones">
+  <h2><span class="num">09</span>Ventajas y desventajas</h2>
+  <p class="lead">Toda decisión tiene un precio. Lo importante es <b>saber cuál pagamos</b> y cómo lo mitigamos.</p>
+
+  <div class="balanza">
+    <div class="plato">
+      <h3 class="ok">Lo que ganamos</h3>
+      <span class="chip v">Ningún evento perdido</span>
+      <span class="chip v">Una falla no tumba todo</span>
+      <span class="chip v">Crecer = sumar instancias</span>
+      <span class="chip v">Sistemas nuevos sin tocar a nadie</span>
+      <span class="chip v">Reprocesar la historia si hay un error</span>
+      <span class="chip v">Ver cada evento de punta a punta</span>
+    </div>
+    <div class="plato">
+      <h3 class="am">Lo que pagamos → y cómo lo mitigamos</h3>
+      <div class="par"><span class="a">El estado tarda un poco en verse</span><span class="flecha">→</span><span class="b">Se mide: menos de 5 s</span></div>
+      <div class="par"><span class="a">Más piezas que operar</span><span class="flecha">→</span><span class="b">Todo en contenedores; Kafka administrado</span></div>
+      <div class="par"><span class="a">El paralelismo tiene techo (24 carriles)</span><span class="flecha">→</span><span class="b">Margen ×2 y palancas previstas</span></div>
+      <div class="par"><span class="a">Curva de aprendizaje del equipo</span><span class="flecha">→</span><span class="b">12 decisiones documentadas y manual de guardia</span></div>
+    </div>
+  </div>
+  <div style="margin-top:14px">
+    <span class="chip r">Descartado: llamadas directas entre sistemas (una caída arrastra a todos)</span>
+    <span class="chip r">Descartado: colas sin historial (no permiten reprocesar)</span>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> se eligió complejidad solo donde el negocio la exige: no perder eventos y aguantar el pico.</div>
+    <a class="mas" href="eje1-arquitectura.html#decisiones">Ver comparación y riesgos →</a>
+  </div>
+</section>
+
+<!-- ============ 10 · PRODUCCION ============ -->
+<section id="produccion">
+  <h2><span class="num">10</span>De la idea a producción</h2>
+  <p class="lead">Cada cambio recorre la <b>misma cadena de controles</b> antes de llegar al cliente, y en temporada pico <b>no se despliega</b>.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 300" width="100%" role="img" aria-label="Cadena de entrega y calendario">
+    <g>
+      <path d="M20,30 h106 l14,32 l-14,32 h-106 z" class="b-ext"/><text x="75" y="58" text-anchor="middle" class="S" style="fill:#dbe4ee">Código</text><text x="75" y="76" text-anchor="middle" class="E">rama + revisión</text>
+      <path d="M144,30 h106 l14,32 l-14,32 h-106 l14,-32 z" class="b-app"/><text x="204" y="58" text-anchor="middle" class="S" style="fill:#dbe4ee">Pruebas</text><text x="204" y="76" text-anchor="middle" class="E">151 en total</text>
+      <path d="M268,30 h106 l14,32 l-14,32 h-106 l14,-32 z" class="b-sec"/><text x="328" y="58" text-anchor="middle" class="S" style="fill:#dbe4ee">Seguridad</text><text x="328" y="76" text-anchor="middle" class="E">escaneo</text>
+      <path d="M392,30 h106 l14,32 l-14,32 h-106 l14,-32 z" class="b-app"/><text x="452" y="58" text-anchor="middle" class="S" style="fill:#dbe4ee">Imágenes</text><text x="452" y="76" text-anchor="middle" class="E">contenedores</text>
+      <path d="M516,30 h106 l14,32 l-14,32 h-106 l14,-32 z" class="b-app"/><text x="576" y="58" text-anchor="middle" class="S" style="fill:#dbe4ee">Humo</text><text x="576" y="76" text-anchor="middle" class="E">todo junto</text>
+      <path d="M640,30 h106 l14,32 l-14,32 h-106 l14,-32 z" class="b-app"/><text x="700" y="58" text-anchor="middle" class="S" style="fill:#dbe4ee">Staging</text><text x="700" y="76" text-anchor="middle" class="E">ensayo general</text>
+      <path d="M764,30 h96 l14,32 l-14,32 h-96 l14,-32 z" class="b-am"/><text x="819" y="58" text-anchor="middle" class="S" style="fill:#ffd166">Aprobación</text><text x="819" y="76" text-anchor="middle" class="E">manual</text>
+      <path d="M878,30 h102 v64 h-102 l14,-32 z" class="b-db"/><text x="935" y="58" text-anchor="middle" class="S" style="fill:#3ddc97">Producción</text><text x="935" y="76" text-anchor="middle" class="E">gradual</text>
+    </g>
+    <text x="500" y="122" text-anchor="middle" class="E">si algo falla en el 10 % de prueba, se revierte solo</text>
+
+    <text x="30" y="170" class="E">CALENDARIO</text>
+    <path d="M40,220 H960" class="ln" style="stroke:#243242;stroke-width:6"/>
+    <rect x="455" y="206" width="275" height="28" rx="6" class="b-dlq"/><text x="592" y="225" text-anchor="middle" class="Tr" style="font-size:13.5px">congelado 15 nov → 10 ene</text>
+    <g class="E" text-anchor="middle">
+      <text x="80" y="256">sep</text><text x="230" y="256">oct</text><text x="380" y="256">nov</text><text x="530" y="256">dic</text><text x="680" y="256">ene</text><text x="830" y="256">feb</text>
+    </g>
+    <path d="M155,192 V214" class="ln"/><text x="155" y="186" text-anchor="middle" class="S">mes 1–2: bases</text>
+    <path d="M530,192 V206" class="ln"/><text x="530" y="186" text-anchor="middle" class="S">mes 3: modo sombra</text>
+    <path d="M790,192 V214" class="ln v"/><text x="790" y="186" text-anchor="middle" class="Tv" style="font-size:13.5px">enero: migración real</text>
+    <text x="500" y="288" text-anchor="middle" class="E">Probado en local y en la nube (Kafka y PostgreSQL administrados en Aiven): 3.000 de 3.000 eventos.</text>
+  </svg>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> el éxito no es la tecnología más moderna, sino <b>un sistema aburrido en temporada pico</b>.</div>
+    <a class="mas" href="eje1-arquitectura.html#produccion">Ver pipeline y despliegue →</a>
+  </div>
+</section>
+
+<div class="pie">Repositorio: github.com/yeissonvj/prueba-tcc-envio (rama develop) · detalle técnico en <a href="eje1-arquitectura.html" style="color:var(--azul)">eje1-arquitectura.html</a></div>
+</main>
+
+<script>
+  const secciones = [...document.querySelectorAll('section')];
+  const enlaces = [...document.querySelectorAll('nav a')];
+  const actual = () => { const y = window.scrollY + 90; let i = 0; secciones.forEach((s, k) => { if (s.offsetTop <= y) i = k; }); return i; };
+  const marcar = () => { const id = secciones[actual()].id; enlaces.forEach(a => a.classList.toggle('activo', a.getAttribute('href') === '#' + id)); };
+  document.addEventListener('scroll', marcar, { passive: true }); marcar();
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown'].includes(e.key)) { e.preventDefault(); secciones[Math.min(actual() + 1, secciones.length - 1)].scrollIntoView(); }
+    if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); secciones[Math.max(actual() - 1, 0)].scrollIntoView(); }
+  });
+</script>
+</body>
+</html>

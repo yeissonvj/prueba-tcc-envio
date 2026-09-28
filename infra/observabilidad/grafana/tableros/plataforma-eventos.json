@@ -1,0 +1,109 @@
+{
+  "uid": "tcc-plataforma-eventos",
+  "title": "TCC · Plataforma de eventos de guías",
+  "tags": ["tcc", "slo"],
+  "timezone": "America/Bogota",
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "schemaVersion": 39,
+  "panels": [
+    { "type": "row", "title": "¿Estamos perdiendo algo?", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "collapsed": false },
+    {
+      "type": "stat", "title": "Respuestas 503 (no durable) · 1 h", "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } } },
+      "targets": [ { "expr": "sum(increase(tcc_eventos_recibidos_total{resultado=\"no_durable\"}[1h])) or vector(0)" } ]
+    },
+    {
+      "type": "stat", "title": "Guardados en contingencia · 1 h", "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 } ] } } },
+      "targets": [ { "expr": "sum(increase(tcc_eventos_contingencia_total[1h])) or vector(0)" } ]
+    },
+    {
+      "type": "stat", "title": "Nuevos en DLQ · 1 h", "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 } ] } } },
+      "targets": [ { "expr": "sum(increase(tcc_dlq_total[1h])) or vector(0)" } ]
+    },
+    {
+      "type": "stat", "title": "Lag total del procesador", "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1000 }, { "color": "red", "value": 10000 } ] } } },
+      "targets": [ { "expr": "sum(clamp_min(kafka_consumergroup_lag{consumergroup=\"procesador-estado\"}, 0)) or vector(0)" } ]
+    },
+
+    { "type": "row", "title": "SLO", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }, "collapsed": false },
+    {
+      "type": "timeseries", "title": "Estado visible · p50 / p95 / p99 (SLO p95 < 5 s)", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(tcc_latencia_estado_seconds_bucket[1m])))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(tcc_latencia_estado_seconds_bucket[1m])))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(tcc_latencia_estado_seconds_bucket[1m])))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Ingesta HTTP · p99 (SLO < 200 ms)", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{http_route=\"/api/v1/eventos-guia\"}[1m])))", "legendFormat": "p99 POST eventos-guia" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Notificación · p95 (SLO < 60 s)", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le, canal) (rate(tcc_latencia_notificacion_seconds_bucket[5m])))", "legendFormat": "p95 {{canal}}" }
+      ]
+    },
+
+    { "type": "row", "title": "Flujo", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }, "collapsed": false },
+    {
+      "type": "timeseries", "title": "Ingesta por resultado (eventos/s)", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [ { "expr": "sum by (resultado) (rate(tcc_eventos_recibidos_total[1m]))", "legendFormat": "{{resultado}}" } ]
+    },
+    {
+      "type": "timeseries", "title": "Procesamiento por resultado (eventos/s)", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [ { "expr": "sum by (resultado) (rate(tcc_eventos_procesados_total[1m]))", "legendFormat": "{{resultado}}" } ]
+    },
+    {
+      "type": "timeseries", "title": "Notificaciones por canal y resultado (/s)", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [ { "expr": "sum by (canal, resultado) (rate(tcc_notificaciones_total[1m]))", "legendFormat": "{{canal}} · {{resultado}}" } ]
+    },
+    {
+      "type": "timeseries", "title": "Lag por grupo de consumo (señal de escalado)", "gridPos": { "h": 8, "w": 24, "x": 0, "y": 23 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [ { "expr": "sum by (consumergroup) (clamp_min(kafka_consumergroup_lag, 0))", "legendFormat": "{{consumergroup}}" } ]
+    },
+
+    { "type": "row", "title": "Logs (Loki) · cada línea con trace_id enlaza a su traza en Jaeger", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 }, "collapsed": false },
+    {
+      "type": "timeseries", "title": "Advertencias y errores por servicio (/min)", "gridPos": { "h": 7, "w": 24, "x": 0, "y": 32 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60 } } },
+      "targets": [ { "expr": "sum by (service_name, severity_text) (count_over_time({service_name=~\"tcc-.+\"} | severity_text=~\"Warning|Error|Critical\" [1m]))", "legendFormat": "{{service_name}} · {{severity_text}}" } ]
+    },
+    {
+      "type": "logs", "title": "Advertencias y errores", "gridPos": { "h": 12, "w": 24, "x": 0, "y": 39 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": { "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true, "enableLogDetails": true },
+      "targets": [ { "expr": "{service_name=~\"tcc-.+\"} | severity_text=~\"Warning|Error|Critical\"" } ]
+    },
+    {
+      "type": "logs", "title": "Todos los logs de la plataforma (filtrar con el buscador del panel)", "gridPos": { "h": 12, "w": 24, "x": 0, "y": 51 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "options": { "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true, "enableLogDetails": true },
+      "targets": [ { "expr": "{service_name=~\"tcc-.+\"}" } ]
+    }
+  ]
+}

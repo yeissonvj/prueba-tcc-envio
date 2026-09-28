@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eje 1 · Arquitectura</title>
+<script src="acceso.js"></script>
+<script src="sesion.js"></script>
+<script>TCC.exigir({ soloAdmin: true })</script>
+<script src="reloj.js"></script>
+<style>
+  :root {
+    --fondo: #0b1016; --panel: #121a23; --panel2: #17212c; --borde: #243242; --texto: #dbe4ee; --tenue: #8a9bb0;
+    --azul: #4ea1ff; --naranja: #ff9f43; --verde: #3ddc97; --morado: #b388ff; --rojo: #ff6b6b; --gris: #6b7b8f; --amarillo: #ffd166;
+    --mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; }
+  nav { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 4px; padding: 10px 20px;
+        background: rgba(11,16,22,.92); backdrop-filter: blur(6px); border-bottom: 1px solid var(--borde); overflow-x: auto; }
+  nav .marca { font-weight: 700; margin-right: 14px; white-space: nowrap; }
+  nav a { color: var(--tenue); text-decoration: none; padding: 5px 10px; border-radius: 6px; white-space: nowrap; font-size: 13px; }
+  nav a:hover, nav a.activo { color: var(--texto); background: var(--panel2); }
+  nav .ayuda { margin-left: auto; color: var(--gris); font-size: 12px; white-space: nowrap; padding-left: 12px; }
+  main { max-width: 1280px; margin: 0 auto; padding: 0 20px 60px; }
+  section { padding: 34px 0 20px; border-bottom: 1px solid var(--borde); min-height: 70vh; }
+  h1 { font-size: 30px; margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 0 0 4px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); color: var(--azul); font-size: 15px; }
+  h3 { font-size: 15px; margin: 0 0 10px; color: var(--texto); }
+  .sub { color: var(--tenue); margin: 0 0 20px; }
+  .grid { display: grid; gap: 14px; }
+  .g2 { grid-template-columns: repeat(2, 1fr); } .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); } .g6 { grid-template-columns: repeat(6, 1fr); }
+  @media (max-width: 1000px) { .g3, .g4, .g6 { grid-template-columns: repeat(2, 1fr); } .g2 { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 16px; }
+  .kpi .v { font-size: 26px; font-weight: 700; font-family: var(--mono); line-height: 1.2; }
+  .kpi .l { color: var(--tenue); font-size: 12.5px; margin-top: 4px; }
+  .ok { color: var(--verde); } .warn { color: var(--amarillo); } .bad { color: var(--rojo); } .az { color: var(--azul); } .na { color: var(--naranja); } .mo { color: var(--morado); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+  th { color: var(--tenue); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  code, .mono { font-family: var(--mono); font-size: 12.5px; }
+  code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; color: #ffcf99; }
+  .tag { display: inline-block; font-size: 11px; font-family: var(--mono); padding: 1px 7px; border-radius: 999px; border: 1px solid var(--borde); color: var(--tenue); margin: 2px 3px 2px 0; }
+  .tag.v { border-color: #1f6b4f; color: var(--verde); } .tag.a { border-color: #6b541f; color: var(--amarillo); } .tag.r { border-color: #6b2a2a; color: var(--rojo); }
+  ul.limpia { list-style: none; padding: 0; margin: 0; } ul.limpia li { padding: 5px 0 5px 20px; position: relative; } ul.limpia li::before { content: "›"; position: absolute; left: 4px; color: var(--azul); font-weight: 700; }
+  .diagrama { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 10px; }
+  svg text { font-family: system-ui, "Segoe UI", sans-serif; }
+  .capa { display: flex; align-items: stretch; gap: 12px; margin-bottom: 8px; }
+  .capa .n { flex: 0 0 34px; display: grid; place-items: center; border-radius: 8px; font-family: var(--mono); font-weight: 700; background: var(--panel2); }
+  .capa .c { flex: 1; background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 9px 12px; }
+  .capa.garantia .n { background: #123b2c; color: var(--verde); } .capa.optim .n { background: #3b3312; color: var(--amarillo); }
+  .barra { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 13px; }
+  .barra .et { flex: 0 0 170px; color: var(--tenue); }
+  .barra .pista { flex: 1; background: var(--panel2); border-radius: 6px; height: 24px; position: relative; overflow: hidden; }
+  .barra .relleno { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 8px; font-family: var(--mono); font-size: 12px; color: #081018; font-weight: 700; }
+  .tubo { display: flex; flex-wrap: wrap; gap: 0; margin: 6px 0 16px; }
+  .etapa { flex: 1 1 140px; position: relative; background: var(--panel2); border: 1px solid var(--borde); padding: 12px 14px 12px 22px; margin-right: 6px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%); min-height: 118px; }
+  .etapa:first-child { clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); padding-left: 14px; }
+  .etapa b { display: block; font-size: 13px; margin-bottom: 4px; } .etapa span { font-size: 12px; color: var(--tenue); }
+  .etapa.gate { border-top: 3px solid var(--amarillo); } .etapa.prod { border-top: 3px solid var(--verde); }
+  .nota { font-size: 12.5px; color: var(--tenue); margin-top: 10px; }
+  .pie { color: var(--gris); font-size: 12px; padding: 24px 0; text-align: center; }
+  .linea-tiempo { display: grid; grid-template-columns: 30px 1fr; gap: 0 12px; }
+  .linea-tiempo .p { font-family: var(--mono); color: var(--azul); text-align: right; padding-top: 7px; }
+  .linea-tiempo .t { border-left: 2px solid var(--borde); padding: 6px 0 6px 14px; }
+  .linea-tiempo .t small { color: var(--verde); display: block; }
+  @media print { nav { display: none; } section { break-after: page; min-height: auto; } body { background: #fff; color: #111; } .card, .diagrama, .capa .c { background: #fff; } }
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <span class="marca">TCC · Eventos de guías <span class="mono" style="color:var(--azul)">Eje 1</span></span>
+  <a href="index.html" style="color:var(--azul);border:1px solid var(--borde)">⌂ Inicio</a>
+  <a href="eje1-vista-general.html" style="color:var(--azul);border:1px solid var(--borde)">← Vista general</a>
+  <a href="#inicio">Inicio</a>
+  <a href="#componentes">Componentes</a>
+  <a href="#hexagonal">Hexagonal</a>
+  <a href="#flujo">Flujo</a>
+  <a href="#integraciones">Integraciones</a>
+  <a href="#cero-perdida">Cero pérdida</a>
+  <a href="#escalabilidad">Escalabilidad</a>
+  <a href="#observabilidad">Observabilidad</a>
+  <a href="#seguridad">Seguridad</a>
+  <a href="#decisiones">Ventajas y desventajas</a>
+  <a href="#produccion">A producción</a>
+  <span class="ayuda">← → para navegar</span>
+</nav>
+
+<main>
+
+<!-- ============ INICIO ============ -->
+<section id="inicio">
+  <h1>Plataforma de eventos de guías · alta concurrencia</h1>
+  <p class="sub">Captura eventos de estado desde TMS, transporte, internacional y automatización; actualiza el estado casi en tiempo real y notifica al cliente <b>sin perder eventos y sin degradar la operación</b>. Implementado en .NET 10, portable a Java/Spring Boot, verificado contra Docker y contra Kafka + PostgreSQL administrados (Aiven).</p>
+
+  <div class="grid g6">
+    <div class="card kpi"><div class="v ok">0</div><div class="l">eventos perdidos en <b>138.375</b> aceptados (reconciliación exacta, incluida una corrida con <code>kill</code> del procesador)</div></div>
+    <div class="card kpi"><div class="v az">1</div><div class="l">efecto por evento: 50 procesamientos concurrentes del mismo evento → 1 fila</div></div>
+    <div class="card kpi"><div class="v">×3,8</div><div class="l">rendimiento del procesador tras paralelizar por partición (90 → 343 ev/s por instancia)</div></div>
+    <div class="card kpi"><div class="v">0,4 s</div><div class="l">de 202 a estado visible sin carga (SLO p95 &lt; 5 s)</div></div>
+    <div class="card kpi"><div class="v">151</div><div class="l">pruebas: unitarias, contrato OpenAPI, arquitectura e integración con Kafka/PostgreSQL reales</div></div>
+    <div class="card kpi"><div class="v">12</div><div class="l">decisiones de arquitectura documentadas (ADR) con alternativas descartadas</div></div>
+  </div>
+
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card">
+      <h3>Supuestos de volumen (no son cifras reales de TCC)</h3>
+      <table>
+        <tr><td>Guías/día en pico (×4)</td><td class="mono">2,4 M</td></tr>
+        <tr><td>Eventos por guía</td><td class="mono">8 → ~19,2 M eventos/día</td></tr>
+        <tr><td>Hora pico / ráfagas</td><td class="mono">~1.350 ev/s / 5.000 ev/s</td></tr>
+        <tr><td><b>Objetivo de diseño</b></td><td class="mono"><b>5.000 ev/s sostenidos · pruebas a 10.000</b></td></tr>
+        <tr><td>Particiones</td><td class="mono">24 (≈ 500 ev/s por partición, margen ×2)</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>SLO (el contrato con el negocio)</h3>
+      <table>
+        <tr><th>Requisito</th><th>Meta</th><th>Cómo se mide</th></tr>
+        <tr><td>Durabilidad</td><td>0 pérdidas: 202 solo si es durable</td><td>Reconciliación</td></tr>
+        <tr><td>Ingesta</td><td>p99 &lt; 200 ms</td><td class="mono">http_server_request_duration</td></tr>
+        <tr><td>Estado visible</td><td>p95 &lt; 5 s</td><td class="mono">tcc_latencia_estado</td></tr>
+        <tr><td>Notificación</td><td>p95 &lt; 60 s</td><td class="mono">tcc_latencia_notificacion</td></tr>
+        <tr><td>Duplicados / orden</td><td>Nunca doble efecto · orden por guía</td><td>Inbox · clave de partición</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COMPONENTES ============ -->
+<section id="componentes">
+  <h2><span class="num">01</span>Componentes</h2>
+  <p class="sub">Arquitectura dirigida por eventos con Kafka en el centro. Cada componente falla de forma aislada: si cae un proveedor de SMS, la ingesta y el rastreo siguen.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1140 640" width="100%" role="img" aria-label="Diagrama de componentes">
+    <defs>
+      <marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a9bb0"/></marker>
+      <style>
+        .c-app{fill:#10243a;stroke:#4ea1ff} .c-kfk{fill:#33230f;stroke:#ff9f43} .c-db{fill:#0f2c22;stroke:#3ddc97}
+        .c-sec{fill:#241b38;stroke:#b388ff} .c-dlq{fill:#341616;stroke:#ff6b6b} .c-ext{fill:#161e27;stroke:#6b7b8f} .c-fut{fill:none;stroke:#6b7b8f;stroke-dasharray:6 5}
+        .t1{fill:#dbe4ee;font-size:14px;font-weight:700} .t2{fill:#8a9bb0;font-size:11.5px} .et{fill:#8a9bb0;font-size:11px}
+        .l{stroke:#8a9bb0;stroke-width:1.6;fill:none} .l.d{stroke-dasharray:5 4}
+      </style>
+    </defs>
+
+    <!-- emisores -->
+    <text x="20" y="130" class="et">SISTEMAS EMISORES</text>
+    <rect x="20" y="150" width="150" height="44" rx="7" class="c-ext"/><text x="95" y="177" text-anchor="middle" class="t1">TMS</text>
+    <rect x="20" y="204" width="150" height="44" rx="7" class="c-ext"/><text x="95" y="231" text-anchor="middle" class="t1">Transporte</text>
+    <rect x="20" y="258" width="150" height="44" rx="7" class="c-ext"/><text x="95" y="285" text-anchor="middle" class="t1">Internacional</text>
+    <rect x="20" y="312" width="150" height="44" rx="7" class="c-ext"/><text x="95" y="339" text-anchor="middle" class="t1">Automatización</text>
+    <path d="M170,172 H200 M170,226 H200 M170,280 H200 M170,334 H200 M200,172 V334" class="l"/>
+    <path d="M200,255 H228" class="l" marker-end="url(#fl)"/>
+
+    <!-- keycloak -->
+    <rect x="230" y="80" width="170" height="60" rx="7" class="c-sec"/>
+    <text x="315" y="106" text-anchor="middle" class="t1">Keycloak</text><text x="315" y="124" text-anchor="middle" class="t2">OAuth2 client credentials</text>
+    <path d="M315,140 V198" class="l d" marker-end="url(#fl)"/><text x="322" y="175" class="et">JWT</text>
+
+    <!-- api -->
+    <rect x="230" y="200" width="170" height="110" rx="8" class="c-app"/>
+    <text x="315" y="232" text-anchor="middle" class="t1">API de ingesta</text>
+    <text x="315" y="252" text-anchor="middle" class="t2">valida · autoriza</text>
+    <text x="315" y="268" text-anchor="middle" class="t2">publica · responde 202</text>
+    <text x="315" y="290" text-anchor="middle" class="t2">sin estado · escala por CPU</text>
+
+    <!-- redis y contingencia -->
+    <path d="M280,310 V358" class="l" marker-end="url(#fl)"/>
+    <rect x="230" y="360" width="100" height="56" rx="7" class="c-db"/>
+    <text x="280" y="384" text-anchor="middle" class="t1">Redis</text><text x="280" y="401" text-anchor="middle" class="t2">filtro 72 h</text>
+    <path d="M360,310 V448" class="l d" marker-end="url(#fl)"/><text x="366" y="400" class="et">Kafka no</text><text x="366" y="413" class="et">confirma</text>
+    <rect x="230" y="450" width="170" height="64" rx="7" class="c-db"/>
+    <text x="315" y="476" text-anchor="middle" class="t1">PostgreSQL</text><text x="315" y="494" text-anchor="middle" class="t2">contingencia_eventos</text>
+    <path d="M400,482 H550 V312" class="l d" marker-end="url(#fl)"/><text x="440" y="476" class="et">relay al volver Kafka</text>
+
+    <!-- kafka raw -->
+    <path d="M400,255 H458" class="l" marker-end="url(#fl)"/><text x="409" y="248" class="et">acks=all</text>
+    <rect x="460" y="200" width="180" height="110" rx="8" class="c-kfk"/>
+    <text x="550" y="228" text-anchor="middle" class="t1">Kafka</text>
+    <text x="550" y="246" text-anchor="middle" class="t2">guias.eventos.recibidos</text>
+    <text x="550" y="264" text-anchor="middle" class="t2">24 particiones · clave = guía</text>
+    <text x="550" y="282" text-anchor="middle" class="t2">RF 3 · min ISR 2 · 7 días</text>
+
+    <!-- procesador -->
+    <path d="M640,255 H698" class="l" marker-end="url(#fl)"/>
+    <rect x="700" y="200" width="170" height="110" rx="8" class="c-app"/>
+    <text x="785" y="228" text-anchor="middle" class="t1">Procesador</text>
+    <text x="785" y="246" text-anchor="middle" class="t2">inbox · máquina de estados</text>
+    <text x="785" y="264" text-anchor="middle" class="t2">outbox</text>
+    <text x="785" y="286" text-anchor="middle" class="t2">particiones en paralelo</text>
+    <path d="M785,200 V142" class="l" marker-end="url(#fl)"/><text x="792" y="176" class="et">poison pill</text>
+    <rect x="700" y="80" width="170" height="60" rx="7" class="c-dlq"/>
+    <text x="785" y="106" text-anchor="middle" class="t1">guias.eventos.dlq</text><text x="785" y="124" text-anchor="middle" class="t2">revisión y redrive</text>
+
+    <!-- postgres principal -->
+    <path d="M785,310 V368" class="l" marker-end="url(#fl)"/><text x="792" y="344" class="et">1 transacción</text>
+    <rect x="700" y="370" width="170" height="90" rx="8" class="c-db"/>
+    <text x="785" y="396" text-anchor="middle" class="t1">PostgreSQL</text>
+    <text x="785" y="414" text-anchor="middle" class="t2">guias · historial (inbox)</text>
+    <text x="785" y="430" text-anchor="middle" class="t2">bandeja_salida (outbox)</text>
+    <text x="785" y="448" text-anchor="middle" class="t2">← GET /guias (API)</text>
+
+    <!-- kafka cambiados -->
+    <path d="M870,415 H928" class="l" marker-end="url(#fl)"/><text x="874" y="408" class="et">relay</text><text x="874" y="432" class="et">1 líder</text>
+    <rect x="930" y="370" width="190" height="90" rx="8" class="c-kfk"/>
+    <text x="1025" y="398" text-anchor="middle" class="t1">Kafka</text>
+    <text x="1025" y="416" text-anchor="middle" class="t2">guias.estados.cambiados</text>
+    <text x="1025" y="434" text-anchor="middle" class="t2">cambios validados + versión</text>
+
+    <!-- consumidores futuros -->
+    <path d="M1025,370 V312" class="l d" marker-end="url(#fl)"/>
+    <rect x="930" y="200" width="190" height="110" rx="8" class="c-fut"/>
+    <text x="1025" y="226" text-anchor="middle" class="t1" style="fill:#8a9bb0">Otros consumidores</text>
+    <text x="1025" y="246" text-anchor="middle" class="t2">integraciones TMS · documental</text>
+    <text x="1025" y="262" text-anchor="middle" class="t2">proyector (Redis + WebSocket)</text>
+    <text x="1025" y="278" text-anchor="middle" class="t2">agente IA de novedades</text>
+    <text x="1025" y="298" text-anchor="middle" class="et">diseñados · fuera del alcance</text>
+
+    <!-- notificador -->
+    <path d="M1025,460 V498" class="l" marker-end="url(#fl)"/>
+    <rect x="930" y="500" width="190" height="80" rx="8" class="c-app"/>
+    <text x="1025" y="528" text-anchor="middle" class="t1">Notificador</text>
+    <text x="1025" y="546" text-anchor="middle" class="t2">SMS → correo · circuito</text>
+    <text x="1025" y="562" text-anchor="middle" class="t2">idempotente (guía:versión:canal)</text>
+    <path d="M870,540 H928" class="l" marker-start="url(#fl)" marker-end="url(#fl)"/>
+    <rect x="700" y="500" width="170" height="80" rx="8" class="c-kfk"/>
+    <text x="785" y="526" text-anchor="middle" class="t1">Reintentos</text>
+    <text x="785" y="544" text-anchor="middle" class="t2">1 min → 10 min → 1 h</text>
+    <text x="785" y="562" text-anchor="middle" class="t2">notificaciones.dlq</text>
+    <path d="M1025,580 V606" class="l" marker-end="url(#fl)"/><text x="1025" y="626" text-anchor="middle" class="et">cliente final (SMS / correo)</text>
+
+    <!-- leyenda -->
+    <g transform="translate(20,560)">
+      <rect width="12" height="12" class="c-app"/><text x="18" y="11" class="et">servicio .NET</text>
+      <rect y="20" width="12" height="12" class="c-kfk"/><text x="18" y="31" class="et">Kafka</text>
+      <rect y="40" width="12" height="12" class="c-db"/><text x="18" y="51" class="et">almacenamiento</text>
+      <rect x="120" width="12" height="12" class="c-sec"/><text x="138" y="11" class="et">seguridad</text>
+      <rect x="120" y="20" width="12" height="12" class="c-dlq"/><text x="138" y="31" class="et">DLQ</text>
+      <path d="M120,46 H132" class="l d"/><text x="138" y="51" class="et">contingencia / futuro</text>
+    </g>
+  </svg>
+  </div>
+
+  <div class="grid g3" style="margin-top:14px">
+    <div class="card"><h3 class="az">API de ingesta</h3><ul class="limpia"><li>Sin base de datos en el camino normal: escala sin límite</li><li>202 solo con confirmación <code>acks=all</code></li><li>Arquitectura hexagonal: 7 proyectos, dependencias verificadas en cada compilación</li></ul></div>
+    <div class="card"><h3 class="az">Procesador de estado</h3><ul class="limpia"><li>Única fuente de verdad del estado</li><li>Historial + estado + outbox en <b>una</b> transacción</li><li>Un trabajador por partición: orden por guía, particiones en paralelo</li></ul></div>
+    <div class="card"><h3 class="az">Notificador</h3><ul class="limpia"><li>Solo estados que le importan al cliente</li><li>Nunca repite ni envía algo obsoleto</li><li>Un proveedor caído no frena a las demás guías</li></ul></div>
+  </div>
+</section>
+
+<!-- ============ HEXAGONAL ============ -->
+<section id="hexagonal">
+  <h2><span class="num">02</span>Arquitectura hexagonal (puertos y adaptadores)</h2>
+  <p class="sub">Los tres servicios comparten el mismo núcleo. El dominio y los casos de uso no conocen Kafka, PostgreSQL, Redis ni HTTP: los ven a través de <b>puertos</b> (interfaces), y la infraestructura los implementa como <b>adaptadores</b>.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1140 560" width="100%" role="img" aria-label="Diagrama de arquitectura hexagonal">
+    <defs>
+      <marker id="flh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a9bb0"/></marker>
+      <style>
+        .h-nucleo{fill:#0e1824;stroke:#4ea1ff;stroke-width:1.6} .h-dom{fill:#0f2c22;stroke:#3ddc97;stroke-width:1.6}
+        .h-cu{fill:#10243a;stroke:#4ea1ff} .h-dec{fill:#2b2710;stroke:#ffd166} .h-pto{fill:#33230f;stroke:#ff9f43}
+        .h-host{fill:#10243a;stroke:#4ea1ff} .h-ad{fill:#161e27;stroke:#6b7b8f}
+        .tm{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;fill:#dbe4ee}
+      </style>
+    </defs>
+
+    <!-- hosts (adaptadores de entrada) -->
+    <text x="20" y="30" class="et">ENTRADA · HOSTS (adaptadores primarios)</text>
+    <rect x="20" y="50" width="270" height="118" rx="8" class="h-host"/>
+    <text x="155" y="76" text-anchor="middle" class="t1">TccEventos.Api</text>
+    <text x="155" y="96" text-anchor="middle" class="t2">POST /eventos-guia → RecibirEvento</text>
+    <text x="155" y="114" text-anchor="middle" class="t2">trabajo relay contingencia → Reenviar</text>
+    <text x="155" y="132" text-anchor="middle" class="t2">GET /guias → IConsultaGuias (lectura</text>
+    <text x="155" y="148" text-anchor="middle" class="t2">directa, lado de consulta CQRS)</text>
+
+    <rect x="20" y="190" width="270" height="118" rx="8" class="h-host"/>
+    <text x="155" y="216" text-anchor="middle" class="t1">TccEventos.Procesador</text>
+    <text x="155" y="236" text-anchor="middle" class="t2">consumidor Kafka por partición</text>
+    <text x="155" y="254" text-anchor="middle" class="t2">ManejadorMensajeRecibido → ProcesarEvento</text>
+    <text x="155" y="272" text-anchor="middle" class="t2">IDestinoDlq · relay de bandeja_salida</text>
+    <text x="155" y="290" text-anchor="middle" class="t2">reintento bloqueante</text>
+
+    <rect x="20" y="330" width="270" height="118" rx="8" class="h-host"/>
+    <text x="155" y="356" text-anchor="middle" class="t1">TccEventos.Notificador</text>
+    <text x="155" y="376" text-anchor="middle" class="t2">consumidor de estados.cambiados</text>
+    <text x="155" y="394" text-anchor="middle" class="t2">ManejadorNotificacion → NotificarCambio</text>
+    <text x="155" y="412" text-anchor="middle" class="t2">IEnrutadorNotificaciones</text>
+    <text x="155" y="430" text-anchor="middle" class="t2">(reintento 1m/10m/1h · DLQ)</text>
+
+    <path d="M290,109 H328" class="l" marker-end="url(#flh)"/>
+    <path d="M290,249 H328" class="l" marker-end="url(#flh)"/>
+    <path d="M290,389 H328" class="l" marker-end="url(#flh)"/>
+
+    <!-- nucleo: aplicacion -->
+    <rect x="330" y="40" width="470" height="470" rx="14" class="h-nucleo"/>
+    <text x="350" y="64" class="t1">TccEventos.Aplicacion</text>
+    <text x="350" y="81" class="t2">casos de uso · puertos · decoradores (solo depende del dominio)</text>
+
+    <rect x="350" y="96" width="170" height="34" rx="6" class="h-cu"/><text x="435" y="118" text-anchor="middle" class="tm">RecibirEvento</text>
+    <rect x="530" y="96" width="170" height="34" rx="6" class="h-cu"/><text x="615" y="118" text-anchor="middle" class="tm">ProcesarEvento</text>
+    <rect x="350" y="138" width="170" height="34" rx="6" class="h-cu"/><text x="435" y="160" text-anchor="middle" class="tm">NotificarCambioEstado</text>
+    <rect x="530" y="138" width="170" height="34" rx="6" class="h-cu"/><text x="615" y="160" text-anchor="middle" class="tm">ReenviarContingencia</text>
+
+    <!-- dominio -->
+    <rect x="370" y="196" width="310" height="180" rx="12" class="h-dom"/>
+    <text x="525" y="222" text-anchor="middle" class="t1">TccEventos.Dominio</text>
+    <text x="525" y="240" text-anchor="middle" class="t2">cero dependencias · sin setters públicos</text>
+    <text x="525" y="268" text-anchor="middle" class="tm">Guia (versión, estado)</text>
+    <text x="525" y="288" text-anchor="middle" class="tm">MaquinaEstados</text>
+    <text x="525" y="308" text-anchor="middle" class="tm">EventoGuia · EstadoGuia</text>
+    <text x="525" y="328" text-anchor="middle" class="tm">reglas de notificación</text>
+    <text x="525" y="354" text-anchor="middle" class="t2">APLICADO · DUPLICADO · TARDIO · INVALIDO</text>
+
+    <!-- decoradores -->
+    <rect x="350" y="400" width="350" height="34" rx="6" class="h-dec"/><text x="525" y="422" text-anchor="middle" class="tm">PublicadorConContingencia (decorador)</text>
+    <rect x="350" y="442" width="350" height="34" rx="6" class="h-dec"/><text x="525" y="464" text-anchor="middle" class="tm">FiltroDuplicadosTolerante (decorador)</text>
+    <text x="525" y="496" text-anchor="middle" class="et">envuelven un puerto con otro puerto: el caso de uso no se entera</text>
+
+    <!-- puertos en el borde -->
+    <g>
+      <rect x="720" y="96"  width="170" height="30" rx="15" class="h-pto"/><text x="805" y="116" text-anchor="middle" class="tm">IPublicadorEventos</text>
+      <rect x="720" y="152" width="170" height="30" rx="15" class="h-pto"/><text x="805" y="172" text-anchor="middle" class="tm">IFiltroDuplicados</text>
+      <rect x="720" y="208" width="170" height="30" rx="15" class="h-pto"/><text x="805" y="228" text-anchor="middle" class="tm">IAlmacenContingencia</text>
+      <rect x="720" y="264" width="170" height="30" rx="15" class="h-pto"/><text x="805" y="284" text-anchor="middle" class="tm">IRepositorioGuias</text>
+      <rect x="720" y="320" width="170" height="30" rx="15" class="h-pto"/><text x="805" y="340" text-anchor="middle" class="tm">IRegistroNotificaciones</text>
+      <rect x="720" y="376" width="170" height="30" rx="15" class="h-pto"/><text x="805" y="396" text-anchor="middle" class="tm">IProveedorNotificacion</text>
+      <rect x="720" y="432" width="170" height="30" rx="15" class="h-pto"/><text x="805" y="452" text-anchor="middle" class="tm">IDirectorioContactos</text>
+    </g>
+
+    <!-- adaptadores de salida -->
+    <text x="920" y="30" class="et">SALIDA · INFRAESTRUCTURA</text>
+    <path d="M890,111 H918" class="l d" marker-end="url(#flh)"/>
+    <path d="M890,167 H918" class="l d" marker-end="url(#flh)"/>
+    <path d="M890,223 H918" class="l d" marker-end="url(#flh)"/>
+    <path d="M890,279 H918" class="l d" marker-end="url(#flh)"/>
+    <path d="M890,335 H918" class="l d" marker-end="url(#flh)"/>
+    <path d="M890,391 H918" class="l d" marker-end="url(#flh)"/>
+    <path d="M890,447 H918" class="l d" marker-end="url(#flh)"/>
+    <rect x="920" y="92"  width="200" height="38" rx="6" class="h-ad"/><text x="1020" y="108" text-anchor="middle" class="t2">PublicadorKafka</text><text x="1020" y="123" text-anchor="middle" class="et">+ PublicadorConCircuito (Polly)</text>
+    <rect x="920" y="148" width="200" height="38" rx="6" class="h-ad"/><text x="1020" y="172" text-anchor="middle" class="t2">FiltroDuplicadosRedis</text>
+    <rect x="920" y="204" width="200" height="38" rx="6" class="h-ad"/><text x="1020" y="228" text-anchor="middle" class="t2">AlmacenContingenciaPostgres</text>
+    <rect x="920" y="260" width="200" height="38" rx="6" class="h-ad"/><text x="1020" y="276" text-anchor="middle" class="t2">RepositorioGuiasPostgres</text><text x="1020" y="291" text-anchor="middle" class="et">inbox · estado · outbox en 1 tx</text>
+    <rect x="920" y="316" width="200" height="38" rx="6" class="h-ad"/><text x="1020" y="340" text-anchor="middle" class="t2">RegistroNotificacionesPostgres</text>
+    <rect x="920" y="372" width="200" height="38" rx="6" class="h-ad"/><text x="1020" y="388" text-anchor="middle" class="t2">ProveedorConCircuito</text><text x="1020" y="403" text-anchor="middle" class="et">→ SMS / correo (simulados)</text>
+    <rect x="920" y="428" width="200" height="38" rx="6" class="h-ad"/><text x="1020" y="452" text-anchor="middle" class="t2">DirectorioContactosSimulado</text>
+
+    <!-- leyenda -->
+    <g transform="translate(20,480)">
+      <rect width="12" height="12" class="h-host"/><text x="18" y="11" class="et">host / caso de uso</text>
+      <rect y="20" width="12" height="12" class="h-dom"/><text x="18" y="31" class="et">dominio</text>
+      <rect x="140" width="12" height="12" class="h-pto"/><text x="158" y="11" class="et">puerto (interfaz)</text>
+      <rect x="140" y="20" width="12" height="12" class="h-dec"/><text x="158" y="31" class="et">decorador</text>
+      <rect x="920" width="12" height="12" class="h-ad"/><text x="938" y="11" class="et">adaptador (implementa el puerto)</text>
+      <path d="M920,26 H932" class="l d"/><text x="938" y="31" class="et">implementa</text>
+    </g>
+  </svg>
+  </div>
+
+  <div class="grid g3" style="margin-top:14px">
+    <div class="card">
+      <h3 class="az">Regla de dependencias (7 proyectos)</h3>
+<pre class="mono" style="margin:0;font-size:12px;color:var(--texto);line-height:1.45">Api  Procesador  Notificador   (hosts)
+  |        |          |
+  +--------+----------+
+  v                   v
+Infraestructura --> Contratos (V1)
+  |
+  v
+Aplicacion
+  |
+  v
+Dominio          (no depende de nada)</pre>
+      <p class="nota">Las flechas apuntan siempre <b>hacia adentro</b>. Los hosts solo arman la inyección de dependencias (composition root) y exponen la entrada.</p>
+    </div>
+    <div class="card">
+      <h3 class="ok">Verificada en cada compilación</h3>
+      <table>
+        <tr><th>Prueba de arquitectura (reflexión)</th></tr>
+        <tr><td>El dominio no depende de ningún proyecto ni librería</td></tr>
+        <tr><td>Los contratos no dependen de nada</td></tr>
+        <tr><td>La aplicación solo depende del dominio (+ abstracción de logs)</td></tr>
+        <tr><td>La infraestructura nunca depende de un host</td></tr>
+        <tr><td>Los hosts no dependen entre sí (3 casos)</td></tr>
+        <tr><td>El dominio no tiene setters públicos</td></tr>
+      </table>
+      <p class="nota">8 pruebas en <code>TccEventos.Arquitectura.Pruebas</code>: si alguien importa Kafka en el dominio, el pipeline falla.</p>
+    </div>
+    <div class="card">
+      <h3 class="na">Qué nos da y qué cuesta</h3>
+      <ul class="limpia">
+        <li><span class="tag v">+</span> Casos de uso probados con <b>falsos escritos a mano</b>, sin Kafka ni base (Dominio 28 + Aplicación 23 pruebas en milisegundos)</li>
+        <li><span class="tag v">+</span> Resiliencia como <b>decoradores</b> (contingencia, circuito, filtro tolerante): se agrega sin tocar la lógica (abierto/cerrado)</li>
+        <li><span class="tag v">+</span> Cambiar Kafka, Redis o el proveedor de SMS = otro adaptador</li>
+        <li><span class="tag v">+</span> Portable a Java/Spring: mismos módulos Maven, ArchUnit en lugar de reflexión</li>
+        <li><span class="tag a">−</span> Más proyectos e interfaces que un CRUD; mitigado con una sola interfaz por necesidad real (sin MediatR ni capas genéricas)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FLUJO ============ -->
+<section id="flujo">
+  <h2><span class="num">03</span>Flujo de datos y garantías por paso</h2>
+  <p class="sub">Kafka entrega "al menos una vez"; los consumidores son idempotentes. Resultado: <b>exactamente un efecto</b>.</p>
+  <div class="grid g2">
+    <div class="card">
+      <div class="linea-tiempo">
+        <div class="p">1</div><div class="t"><b>Emisor → API</b> · <code>POST /api/v1/eventos-guia</code> con JWT<small>Rechaza temprano: token, alcance, origen y contrato V1 (400/401/403)</small></div>
+        <div class="p">2</div><div class="t"><b>API → Kafka</b> · clave = número de guía<small>acks=all + idempotencia: durable en ≥ 2 réplicas antes de responder</small></div>
+        <div class="p">3</div><div class="t"><b>API → Emisor</b> · <code>202 Accepted</code> + Location<small>Sin 202, el emisor reintenta con el mismo idEvento (200 si ya llegó)</small></div>
+        <div class="p">4</div><div class="t"><b>Kafka → Procesador</b> · partición de la guía<small>Orden por guía sin bloqueos distribuidos</small></div>
+        <div class="p">5</div><div class="t"><b>Procesador → PostgreSQL</b> · BEGIN · historial · guía · outbox · COMMIT<small>Todo o nada; conflicto de versión → rollback y reintento</small></div>
+        <div class="p">6</div><div class="t"><b>Marca el offset</b> solo después del COMMIT<small>Si cae, relee; el inbox descarta lo ya aplicado</small></div>
+        <div class="p">7</div><div class="t"><b>Relay → guias.estados.cambiados</b> · un solo líder<small>Publica solo lo confirmado, en orden de versión</small></div>
+        <div class="p">8</div><div class="t"><b>Notificador → cliente</b><small>Clave guía:versión:canal · descarta versiones obsoletas</small></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Máquina de estados (dominio)</h3>
+<pre class="mono" style="margin:0;color:var(--texto);font-size:12.5px;line-height:1.45">Creada -> Recogida -> EnBodegaOrigen -> EnTransito
+  -> EnBodegaDestino -> EnReparto -> <span class="ok">Entregada (final)</span>
+                        |          ^
+                        v          |
+                        Novedad -> ReintentoEntrega
+                        |
+                        v
+                        <span class="ok">Devuelta (final)</span>
+(todo estado no final puede pasar a Novedad)</pre>
+      <table style="margin-top:14px">
+        <tr><th>El evento es…</th><th>Resultado</th></tr>
+        <tr><td>Repetido</td><td>Se ignora (inbox)</td></tr>
+        <tr><td>Más reciente y válido</td><td class="ok">Se aplica · versión +1 · se publica</td></tr>
+        <tr><td>Más viejo que el último</td><td class="warn">Historial <code>TARDIO</code>, sin cambio</td></tr>
+        <tr><td>Transición no permitida</td><td class="warn">Historial <code>TRANSICION_INVALIDA</code> + métrica</td></tr>
+      </table>
+      <p class="nota">Medido: una guía con 7 estados publicó v1…v7 en orden; 202 → visible en el GET en 391 ms.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INTEGRACIONES ============ -->
+<section id="integraciones">
+  <h2><span class="num">04</span>Integraciones entre sistemas</h2>
+  <p class="sub">Los productores publican por la API; cada consumidor tiene su propio grupo y avanza a su ritmo. Agregar un consumidor no toca a los productores.</p>
+  <div class="grid g2">
+    <div class="card">
+      <table>
+        <tr><th>Sistema</th><th>Publica</th><th>Consume</th><th>Grupo de consumo</th></tr>
+        <tr><td>TMS</td><td>API (<code>origen=TMS</code>)</td><td><code>estados.cambiados</code></td><td class="mono">tms-sync</td></tr>
+        <tr><td>Transporte (mensajeros)</td><td>API (<code>origen=TRANSPORTE</code>)</td><td>—</td><td>—</td></tr>
+        <tr><td>Internacional</td><td>API</td><td><code>estados.cambiados</code></td><td class="mono">intl-sync</td></tr>
+        <tr><td>Automatización</td><td>API</td><td><code>estados.cambiados</code></td><td class="mono">automation</td></tr>
+        <tr><td>Gestión documental</td><td>—</td><td><code>estados.cambiados</code> (ENTREGADA)</td><td class="mono">docs-pod</td></tr>
+        <tr><td>Agente IA</td><td>API (<code>origen=AI_AGENT</code>)</td><td><code>estados.cambiados</code> (NOVEDAD)</td><td class="mono">ai-novelty</td></tr>
+        <tr><td>Portal de rastreo</td><td>—</td><td><code>GET /guias</code> (alcance <code>guias:leer</code>)</td><td>—</td></tr>
+        <tr><td><b>Implementados</b></td><td colspan="2">Procesador y notificador</td><td class="mono">procesador-estado · notificador</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Contratos versionados (V1)</h3>
+<pre class="mono" style="margin:0 0 12px;color:#ffcf99;font-size:12.5px">{
+  "idEvento":   "0199a1b2-7c3d-7e4f-8a9b-0c1d2e3f4a5b",
+  "numeroGuia": "TCC123456789",
+  "estado":     "EN_REPARTO",
+  "ocurridoEn": "2026-11-30T10:15:00-05:00",
+  "origen":     "TMS",
+  "novedad":    null
+}</pre>
+      <ul class="limpia">
+        <li><code>idEvento</code> generado en origen (UUID v7): llave de idempotencia de punta a punta</li>
+        <li>Solo cambios compatibles hacia atrás; la <b>prueba de contrato OpenAPI</b> falla si alguien rompe la ruta, los códigos o los campos</li>
+        <li>Tópicos: <code>guias.eventos.recibidos</code>, <code>guias.estados.cambiados</code>, <code>notificaciones.reintento.*</code>, DLQ</li>
+        <li>El evento no lleva teléfono ni correo (Ley 1581): se consultan al notificar</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CERO PÉRDIDA ============ -->
+<section id="cero-perdida">
+  <h2><span class="num">05</span>Cómo se garantiza que no se pierdan eventos</h2>
+  <p class="sub">Regla de oro: <b>nunca 202 sin almacenamiento durable</b>. Idempotencia en capas: las optimizaciones pueden fallar; las garantías no.</p>
+  <div class="grid g3">
+    <div>
+      <h3>Idempotencia en capas</h3>
+      <div class="capa optim"><div class="n">1</div><div class="c"><b>idEvento en origen</b><br><span class="nota">optimización</span></div></div>
+      <div class="capa optim"><div class="n">2</div><div class="c"><b>Filtro Redis 72 h</b> (marca después de publicar)<br><span class="nota">optimización · si cae, se sigue</span></div></div>
+      <div class="capa optim"><div class="n">3</div><div class="c"><b>Productor idempotente</b> de Kafka<br><span class="nota">optimización</span></div></div>
+      <div class="capa garantia"><div class="n">4</div><div class="c"><b>Inbox</b>: <code>historial_eventos.id_evento</code> PK<br><span class="nota ok">garantía · verificado con 50 concurrentes → 1 fila</span></div></div>
+      <div class="capa garantia"><div class="n">5</div><div class="c"><b>Clave de notificación</b> guía:versión:canal<br><span class="nota ok">garantía · replay completo → 0 SMS repetidos</span></div></div>
+    </div>
+    <div>
+      <h3>Reintentos: dos políticas distintas</h3>
+      <div class="card" style="margin-bottom:10px">
+        <b class="az">Procesador · bloqueante</b> <span class="tag">el orden es sagrado</span>
+        <ul class="limpia"><li>Transitorio (BD, red, conflicto) → backoff exponencial + jitter, sin límite, <b>sin saltar</b></li><li>Ilegible → DLQ de inmediato</li><li>Error inesperado → 3 intentos → DLQ (no congela la partición)</li></ul>
+      </div>
+      <div class="card">
+        <b class="az">Notificador · no bloqueante</b> <span class="tag">el flujo es sagrado</span>
+        <ul class="limpia"><li>Proveedor caído → <code>reintento.1m</code> → <code>10m</code> → <code>1h</code></li><li>Luego canal alterno (correo) → DLQ</li><li>Circuit breaker por proveedor</li></ul>
+      </div>
+    </div>
+    <div>
+      <h3>Si Kafka se cae</h3>
+      <div class="card" style="margin-bottom:10px">
+<pre class="mono" style="margin:0;font-size:12px;color:var(--texto)">RecibirEvento
+  → Contingencia(          PostgreSQL
+      → Circuito(          Polly
+          → Kafka ))       acks=all</pre>
+        <table style="margin-top:8px">
+          <tr><td>Kafka caído</td><td class="ok">202 (contingencia)</td></tr>
+          <tr><td>…con circuito abierto</td><td class="ok">202 en ~0,1 s</td></tr>
+          <tr><td>Kafka + PostgreSQL caídos</td><td class="warn">503 + Retry-After</td></tr>
+          <tr><td>Kafka vuelve</td><td class="ok">relay reenvía, 0 pérdidas</td></tr>
+        </table>
+      </div>
+      <h3>Evidencia: reconciliación</h3>
+      <table>
+        <tr><th>Corrida</th><th>202</th><th>En BD</th><th>Dif.</th></tr>
+        <tr><td>C1 rampa 200→1.000 ev/s</td><td class="mono">69.849</td><td class="mono">69.849</td><td class="ok mono">0</td></tr>
+        <tr><td>C2 + <code>kill</code> del procesador</td><td class="mono">53.827</td><td class="mono">53.827</td><td class="ok mono">0</td></tr>
+        <tr><td>C3 (dos corridas)</td><td class="mono">11.699</td><td class="mono">11.699</td><td class="ok mono">0</td></tr>
+        <tr><td>Aiven (nube)</td><td class="mono">3.000</td><td class="mono">3.000</td><td class="ok mono">0</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ESCALABILIDAD ============ -->
+<section id="escalabilidad">
+  <h2><span class="num">06</span>Escalabilidad</h2>
+  <p class="sub">Cada pieza escala por la señal correcta. El techo de paralelismo son las particiones (24), y dentro de cada instancia las particiones avanzan en paralelo.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Cómo escala cada componente</h3>
+      <table>
+        <tr><th>Componente</th><th>Señal</th><th>Límite / nota</th></tr>
+        <tr><td>API de ingesta</td><td>CPU / RPS (HPA)</td><td>Sin estado: horizontal sin techo</td></tr>
+        <tr><td>Procesador</td><td><b>Lag</b> del grupo (KEDA)</td><td>Hasta 24 instancias; 24 transacciones concurrentes por instancia</td></tr>
+        <tr><td>Notificador</td><td>Lag (KEDA)</td><td>Aislado: su lag no afecta la ingesta</td></tr>
+        <tr><td>Lecturas (portal)</td><td>—</td><td>Hoy PostgreSQL; a escala, proyección en Redis (CQRS)</td></tr>
+        <tr><td>Picos</td><td>—</td><td>Kafka absorbe; los consumidores se ponen al día</td></tr>
+      </table>
+      <h3 style="margin-top:16px">Particiones en paralelo sin perder el orden</h3>
+<pre class="mono" style="margin:0;font-size:12px;color:var(--texto)">Consume() ──► despacha por partición
+               ├─ trabajador p0  (en orden) ─► StoreOffset
+               ├─ trabajador p1  (en orden) ─► StoreOffset
+               └─ …                cola llena → pausa + seek (contrapresión)</pre>
+    </div>
+    <div class="card">
+      <h3>Medido: el cuello de botella y su corrección</h3>
+      <div class="barra"><div class="et">Procesador secuencial (C1)</div><div class="pista"><div class="relleno" style="width:26%;background:var(--rojo)">~90 ev/s</div></div></div>
+      <div class="barra"><div class="et">Particiones en paralelo (C2)</div><div class="pista"><div class="relleno" style="width:100%;background:var(--verde)">~343 ev/s (×3,8)</div></div></div>
+      <div class="barra"><div class="et">Estado visible p95 (C1)</div><div class="pista"><div class="relleno" style="width:100%;background:var(--rojo)">107 s</div></div></div>
+      <div class="barra"><div class="et">Estado visible p95 (C2)</div><div class="pista"><div class="relleno" style="width:16%;background:var(--verde)">16,7 s</div></div></div>
+      <div class="barra"><div class="et">Drenar el atraso</div><div class="pista"><div class="relleno" style="width:100%;background:var(--amarillo)">12,7 min → 2,3 min</div></div></div>
+      <p class="nota">Por instancia, en un portátil que corre todo a la vez (3 brokers, PostgreSQL, observabilidad, k6). La API sola: mediana 25,5 ms; compitiendo con el procesador en la misma máquina: 229 ms → la ingesta la limita la contención local, no el código. Certificar 5.000 ev/s exige infraestructura dedicada.</p>
+      <h3 style="margin-top:14px">Siguientes palancas</h3>
+      <ul class="limpia"><li>Escalar instancias por lag hasta 24</li><li>Micro-lotes por partición (menos <code>fsync</code>)</li><li>Unir verificación de inbox y lectura (menos viajes a la BD)</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ OBSERVABILIDAD ============ -->
+<section id="observabilidad">
+  <h2><span class="num">07</span>Observabilidad</h2>
+  <p class="sub">Las apps solo hablan OTLP; el Collector reparte a cada backend. Cambiar de producto es configuración, no código.</p>
+  <div class="grid g2">
+    <div class="card">
+<pre class="mono" style="margin:0 0 12px;font-size:12.5px;color:var(--texto)">API · Procesador · Notificador
+        │ OTLP (trazas, métricas, logs)
+        ▼
+ OpenTelemetry Collector
+   ├─► <span class="na">Jaeger</span>      trazas de punta a punta
+   ├─► <span class="ok">Prometheus</span>  métricas + 6 alertas por SLO
+   └─► <span class="mo">Loki</span>        logs (trace_id → Jaeger)
+        ▼
+     <span class="az">Grafana</span>   tablero único</pre>
+      <ul class="limpia">
+        <li><b>Una traza</b> sigue el evento: API → Kafka → procesador → SQL → outbox → notificador (11 spans). El contexto viaja en encabezados de Kafka y se guarda en la fila del outbox para no cortarse</li>
+        <li>Logs JSON con <code>TraceId</code>; en Grafana cada log enlaza a su traza</li>
+        <li>Lag por grupo de consumo (kafka-exporter): la señal de escalado</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Alertas alineadas con los SLO</h3>
+      <table>
+        <tr><th>Alerta</th><th>Condición</th><th>Severidad</th></tr>
+        <tr><td>IngestaNoDurable</td><td>Hubo 503</td><td><span class="tag r">página</span></td></tr>
+        <tr><td>EstadoVisibleLentoP95</td><td>p95 &gt; 5 s por 5 min</td><td><span class="tag r">página</span></td></tr>
+        <tr><td>LagProcesadorCreciente</td><td>&gt; 10.000 por 5 min</td><td><span class="tag r">página</span></td></tr>
+        <tr><td>IngestaEnContingencia</td><td>Se usó la contingencia</td><td><span class="tag a">ticket</span></td></tr>
+        <tr><td>MensajesEnDlq</td><td>DLQ creció</td><td><span class="tag a">ticket</span></td></tr>
+        <tr><td>NotificacionLentaP95</td><td>p95 &gt; 60 s por 10 min</td><td><span class="tag a">ticket</span></td></tr>
+      </table>
+      <h3 style="margin-top:14px">Métricas propias</h3>
+      <p class="mono" style="font-size:12px;color:var(--tenue);margin:0">tcc_eventos_recibidos_total{resultado} · tcc_eventos_contingencia_total · tcc_eventos_procesados_total{resultado} · tcc_latencia_estado_seconds · tcc_notificaciones_total{canal,resultado} · tcc_latencia_notificacion_seconds · tcc_dlq_total{origen}</p>
+      <p class="nota">Verificado provocando fallas: con Redis caído, las advertencias aparecen en Loki con su trace_id y la traza existe en Jaeger.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SEGURIDAD ============ -->
+<section id="seguridad">
+  <h2><span class="num">08</span>Seguridad</h2>
+  <p class="sub">Defensa en profundidad: identidad por sistema, autorización sobre los datos, protección de datos personales y cadena de suministro revisada.</p>
+  <div class="grid g4">
+    <div class="card"><h3 class="mo">Identidad</h3><ul class="limpia"><li>OAuth2 client credentials por sistema</li><li>JWT RS256: emisor, audiencia <code>api-ingesta</code>, vigencia 5 min</li><li>Solo RS256 (sin "alg confusion")</li></ul></div>
+    <div class="card"><h3 class="mo">Autorización</h3><ul class="limpia"><li>Alcances: <code>eventos:escribir</code>, <code>guias:leer</code></li><li><b>Cada cliente solo reporta su origen</b> (anti-suplantación → 403)</li><li>429 por cliente; límite global en el Gateway</li></ul></div>
+    <div class="card"><h3 class="mo">Datos</h3><ul class="limpia"><li>Ley 1581: el evento no lleva teléfono ni correo</li><li>Destinos enmascarados en logs (<code>300****567</code>)</li><li>Errores sin detalles internos (ProblemDetails)</li><li>Cuerpo máx. 64 KB</li></ul></div>
+    <div class="card"><h3 class="mo">Plataforma</h3><ul class="limpia"><li>Imágenes chiseled: sin shell, usuario no root</li><li>Trivy (config e imágenes) + NuGet vulnerables en CI</li><li>TLS hacia Kafka/PostgreSQL administrados</li><li>Secretos por variables de entorno</li></ul></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>Verificado contra Keycloak real</h3>
+    <table>
+      <tr><th>Intento</th><th>Resultado</th></tr>
+      <tr><td>Sin token</td><td class="ok mono">401</td></tr>
+      <tr><td>Token de TMS reportando origen TRANSPORTE (suplantación)</td><td class="ok mono">403</td></tr>
+      <tr><td>Token del portal (solo lectura) intentando escribir</td><td class="ok mono">403</td></tr>
+      <tr><td>Token alterado (azp cambiado)</td><td class="ok mono">401 · "signature is invalid"</td></tr>
+      <tr><td>TMS supera su límite</td><td class="ok mono">429 · Transporte sigue con 202</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ DECISIONES ============ -->
+<section id="decisiones">
+  <h2><span class="num">09</span>Ventajas, desventajas y alternativas</h2>
+  <p class="sub">Cambiamos simplicidad por resiliencia, conscientemente, solo donde el negocio lo exige.</p>
+  <div class="grid g2">
+    <div class="card">
+      <table>
+        <tr><th>Ventaja</th><th>Desventaja</th><th>Mitigación</th></tr>
+        <tr><td>Cero pérdida demostrable</td><td>Más piezas que operar</td><td>Todo en Compose/IaC; Kafka administrado</td></tr>
+        <tr><td>Absorbe picos ×4</td><td>Consistencia eventual (segundos)</td><td>SLO p95 &lt; 5 s acordado con producto</td></tr>
+        <tr><td>Fallas aisladas</td><td>Depurar lo asíncrono es más difícil</td><td>Trazas + logs enlazados</td></tr>
+        <tr><td>Replay (se usó de verdad tras un bug)</td><td>Evolución de contratos</td><td>V1 versionado + prueba de contrato</td></tr>
+        <tr><td>Orden por guía sin bloqueos</td><td>Techo = particiones</td><td>24 particiones + paralelismo por partición</td></tr>
+        <tr><td>Nuevos consumidores sin tocar productores</td><td>Curva de aprendizaje de Kafka</td><td>Plan de formación y pairing</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Alternativas descartadas</h3>
+      <table>
+        <tr><td><b>REST síncrono</b> entre sistemas</td><td>Fallas en cascada, sin absorción de picos</td></tr>
+        <tr><td><b>RabbitMQ</b></td><td>Orden por clave y replay más difíciles (válido para notificaciones)</td></tr>
+        <tr><td>Guardar en BD <b>antes</b> de publicar</td><td>Cuello de botella en el camino crítico</td></tr>
+        <tr><td>Event sourcing completo</td><td>Excesivo para el equipo y el problema</td></tr>
+        <tr><td>Relay con varias instancias</td><td>Desordena cambios de una guía → un solo líder</td></tr>
+        <tr><td>Historial particionado como inbox</td><td>Rompe la unicidad global del idEvento</td></tr>
+      </table>
+      <h3 style="margin-top:14px">Riesgos conocidos (documentados)</h3>
+      <ul class="limpia"><li>Durante la recuperación de la contingencia el orden por guía no está garantizado (lo absorbe la regla de "tardío") · ADR-0010</li><li>Capacidad de 5.000 ev/s no certificada en infraestructura dedicada</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRODUCCIÓN ============ -->
+<section id="produccion">
+  <h2><span class="num">10</span>De la idea a producción</h2>
+  <p class="sub">Trunk-based con compuertas automáticas: nada llega a producción sin pasar las mismas pruebas, y en temporada pico no se despliega.</p>
+  <h3>Pipeline de integración y entrega continuas (GitHub Actions)</h3>
+  <div class="tubo">
+    <div class="etapa"><b>1 · Calidad</b><span>Compila con avisos = errores · 151 pruebas (incl. Kafka y PostgreSQL reales con Testcontainers) · cobertura</span></div>
+    <div class="etapa gate"><b>2 · Seguridad</b><span>NuGet vulnerables · Trivy sobre Dockerfile, Compose y secretos</span></div>
+    <div class="etapa"><b>3 · Imágenes</b><span>Chiseled + ReadyToRun · Trivy CRITICAL/HIGH · GHCR solo desde main</span></div>
+    <div class="etapa gate"><b>4 · Humo</b><span>Sistema completo con esas imágenes: 401 · 202 · 200 · 400 · estado visible</span></div>
+    <div class="etapa"><b>5 · Staging</b><span>Despliegue automático desde main</span></div>
+    <div class="etapa gate"><b>6 · Aprobación</b><span>Entorno protegido · congelamiento 15-nov → 10-ene (solo [hotfix])</span></div>
+    <div class="etapa prod"><b>7 · Producción</b><span>Canary 10 % → 100 % con rollback automático por errores, lag o latencia</span></div>
+  </div>
+  <div class="grid g3">
+    <div class="card"><h3>Despliegue sin sorpresas</h3><ul class="limpia"><li>Migraciones Flyway expand/contract (un job, no la app)</li><li>Sondas: <code>/salud/viva</code> sin dependencias · <code>/salud/lista</code> = ¿puede guardar durable?</li><li>Asignación cooperative-sticky: rebalanceos sin parar todo</li><li>Configuración 100 % por variables de entorno</li></ul></div>
+    <div class="card"><h3>Entornos verificados</h3><ul class="limpia"><li>Local: todo en Docker Compose (perfil <code>aplicaciones</code>)</li><li>Nube: Kafka + PostgreSQL administrados en <b>Aiven</b> con TLS · humo OK · 3.000 = 3.000</li><li>Mismos contratos, tópicos y migraciones para la versión Java/Spring</li></ul></div>
+    <div class="card"><h3>Adopción gradual (90 días)</h3><ul class="limpia"><li><b>Mes 1</b> entender: mapa de sistemas, métricas base</li><li><b>Mes 2</b> fundamentos: pipeline, walking skeleton en staging</li><li><b>Mes 3</b> piloto con TMS en <b>modo sombra</b> durante el pico</li><li>Enero: migración real, un sistema a la vez</li></ul></div>
+  </div>
+</section>
+
+<div class="pie">Repositorio: <span class="mono">github.com/yeissonvj/prueba-tcc-envio</span> (rama develop) · detalle en <span class="mono">docs/arquitectura.md</span>, <span class="mono">docs/adr/</span>, <span class="mono">docs/pruebas.md</span> · cifras medidas en septiembre de 2026</div>
+</main>
+
+<script>
+  // Navegación de presentación: ← / → (o AvPág / RePág) saltan de sección; el menú marca la sección visible.
+  const secciones = [...document.querySelectorAll('section')];
+  const enlaces = [...document.querySelectorAll('nav a')];
+  function actual() {
+    const y = window.scrollY + 90;
+    let i = 0;
+    secciones.forEach((s, k) => { if (s.offsetTop <= y) i = k; });
+    return i;
+  }
+  function marcar() {
+    const id = secciones[actual()].id;
+    enlaces.forEach(a => a.classList.toggle('activo', a.getAttribute('href') === '#' + id));
+  }
+  document.addEventListener('keydown', e => {
+    const siguiente = ['ArrowRight', 'PageDown'].includes(e.key), anterior = ['ArrowLeft', 'PageUp'].includes(e.key);
+    if (!siguiente && !anterior) return;
+    e.preventDefault();
+    const i = Math.min(secciones.length - 1, Math.max(0, actual() + (siguiente ? 1 : -1)));
+    secciones[i].scrollIntoView({ behavior: 'smooth' });
+  });
+  window.addEventListener('scroll', marcar, { passive: true });
+  marcar();
+</script>
+</body>
+</html>

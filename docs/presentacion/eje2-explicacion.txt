@@ -1,0 +1,310 @@
+EJE 2 · DESARROLLO Y CALIDAD
+Explicación narrada, para contarla como un profesor
+====================================================
+
+Cómo usar este texto
+--------------------
+Acompaña a la vista general (eje2-vista-general.html). Cada parte corresponde a una
+diapositiva. Es la historia que hay que contar, no un texto para leer en voz alta.
+Las frases entre [corchetes] son indicaciones para ti.
+
+Algo que conviene decir desde el principio, con honestidad: la solución se construyó
+y se verificó en .NET. La versión Java que muestro aquí es el diseño de cómo quedaría,
+pieza por pieza. Como en .NET se eligieron desde el principio herramientas que
+existen en los dos mundos, la versión Java es una traducción, no un proyecto nuevo.
+
+
+----------------------------------------------------------------------
+0. DE LA ARQUITECTURA AL CÓDIGO
+----------------------------------------------------------------------
+
+En el eje anterior vimos el plano de la casa. Hoy entramos a la obra: cómo se
+construye, cómo se revisa que quede bien y qué herramientas usamos.
+
+[Señalar los cuatro recuadros]
+
+Vamos a hablar de cuatro cosas:
+1. Cómo se organiza el código del servicio en Java con Spring.
+2. Qué se prueba, y por qué.
+3. Cómo nos aseguramos de que la calidad no dependa de la suerte.
+4. Cómo usamos la inteligencia artificial para construir más rápido sin perder el
+   control.
+
+[Señalar los números]
+
+Y tengo un punto de partida muy concreto: 151 pruebas que ya funcionan en .NET.
+Esas pruebas son la especificación. Si la versión Java las pasa, se comporta igual.
+
+
+----------------------------------------------------------------------
+1. CÓMO SE ORGANIZA EL SERVICIO
+----------------------------------------------------------------------
+
+Piensen en un edificio. Los cimientos no pueden depender del último piso; es al
+revés: los pisos de arriba se apoyan en los de abajo.
+
+[Señalar de abajo hacia arriba]
+
+- Abajo del todo, en verde, está el dominio: las reglas del negocio. Qué estados
+  tiene una guía, cuáles puede seguir, qué hacer con un evento viejo. Es Java puro:
+  no sabe nada de Kafka, de bases de datos ni de Spring.
+- Encima, la aplicación: los casos de uso, como "recibir un evento" o "procesarlo".
+  También Java puro.
+- Luego la infraestructura: el código que habla con Kafka, con PostgreSQL y con
+  Redis.
+- Y arriba, los tres programas que se ejecutan: la API, el procesador y el
+  notificador. Aquí sí vive Spring.
+
+[Señalar las dos franjas punteadas]
+
+La franja azul es donde vive Spring. La verde es Java puro.
+
+¿Y cómo garantizamos que nadie rompa el orden? Aquí está lo bonito de Java con
+Maven: cada piso es un módulo, y cada módulo declara de qué depende. Al módulo del
+dominio simplemente no le damos Spring. Si alguien intenta usarlo ahí, el código no
+compila. No hay que confiar en la memoria de nadie: el compilador lo impide.
+
+¿Para qué sirve todo esto? Para que las reglas del negocio se prueben en
+milisegundos, sin levantar ni una base de datos.
+
+
+----------------------------------------------------------------------
+2. DE .NET A JAVA, PIEZA POR PIEZA
+----------------------------------------------------------------------
+
+Cuando se construyó la versión .NET se puso una regla: no usar herramientas que solo
+existan en .NET. ¿Por qué? Porque sabíamos que el destino era Java.
+
+[Recorrer los pares]
+
+Por eso cada pieza tiene su gemela:
+- La forma de crear los servicios web en .NET se convierte en Spring Web.
+- Polly, que maneja las fallas, se convierte en Resilience4j.
+- La librería de Kafka se convierte en Spring Kafka.
+- Y el SQL que hablaba con PostgreSQL es el mismo; solo cambia la herramienta que lo
+  envía.
+
+Hay una muy interesante: en .NET se usa async/await para atender muchas cosas a la
+vez. En Java moderno tenemos hilos virtuales, que logran lo mismo con código más
+simple, escrito como si fuera secuencial.
+
+[Señalar la línea de abajo]
+
+Y lo más importante: hay cosas que no cambian en absoluto. Los contratos, los
+tópicos de Kafka, las tablas de la base de datos, el servidor de identidad y la
+observabilidad son exactamente los mismos.
+
+Eso permite algo muy valioso: durante la migración, .NET y Java pueden convivir.
+Puedo cambiar el procesador a Java y dejar la API en .NET, y todo sigue funcionando,
+porque hablan el mismo idioma.
+
+
+----------------------------------------------------------------------
+3. EL RECORRIDO DE UNA PETICIÓN POR EL CÓDIGO
+----------------------------------------------------------------------
+
+Sigamos un evento, ahora por dentro del código.
+
+[Recorrer de izquierda a derecha]
+
+- Primero, la seguridad de Spring revisa el pase y el permiso. Si algo falla, se
+  detiene ahí: 401 o 403.
+- Después, el controlador revisa que el mensaje esté bien escrito y que el sistema
+  que lo envía hable por sí mismo y no por otro.
+- Luego viene el caso de uso, RecibirEvento, que pregunta algo muy sencillo: "¿este
+  evento ya llegó antes?". Si ya llegó, responde 200 y no hace nada más.
+- Y al final, publicar en Kafka.
+
+[Señalar las cajas amarilla y roja, una dentro de la otra]
+
+Miren cómo está dibujado Kafka: dentro de una caja roja que se llama "circuito", y
+esa a su vez dentro de una amarilla que se llama "contingencia". Son como muñecas
+rusas.
+
+- El circuito es como el breaker eléctrico de la casa: si Kafka falla muchas veces
+  seguidas, deja de intentarlo por un rato para no empeorar las cosas.
+- La contingencia es el plan B: si Kafka no confirma, guarda el evento en PostgreSQL.
+
+Y aquí está la gracia del diseño: el caso de uso no sabe que existen el circuito ni
+el plan B. Solo sabe "publica esto". Las protecciones se agregaron envolviendo, sin
+tocar su código. En los libros a esto se le llama el principio abierto/cerrado:
+abierto para agregar comportamiento, cerrado para modificar lo que ya funciona.
+
+
+----------------------------------------------------------------------
+4. QUÉ PROBARÍA
+----------------------------------------------------------------------
+
+[Señalar la pirámide de abajo hacia arriba]
+
+Las pruebas se organizan como una pirámide.
+
+- Abajo, la base ancha: muchísimas pruebas rápidas sobre las reglas del negocio.
+  Por ejemplo: "si una guía está entregada, no puede volver a en reparto". Corren en
+  milisegundos, cientos de veces al día.
+- Encima, las pruebas de la API: que cada situación devuelva la respuesta correcta.
+  Un evento válido, 202; uno repetido, 200; uno mal escrito, 400; sin permiso, 403.
+- Más arriba, las pruebas de integración, con Kafka y PostgreSQL de verdad, que se
+  levantan en contenedores solo para la prueba y luego se descartan.
+- Y en la punta, pocas pero muy realistas: carga y caos. Mandar miles de eventos
+  por segundo, apagar piezas a propósito y contar que no se perdió nada.
+
+[Señalar la barra morada]
+
+Al costado, una prueba que corre siempre: la de arquitectura. Revisa que nadie haya
+roto el orden de los pisos del edificio.
+
+¿Cuál es la prueba que más me importa? Esta: tomar un mismo evento y procesarlo 50
+veces al mismo tiempo, contra una base de datos real. El resultado tiene que ser una
+sola fila. Esa prueba no se puede hacer con simulaciones, porque lo que se prueba es
+justamente la base de datos real bajo presión.
+
+
+----------------------------------------------------------------------
+5. CÓMO ASEGURO LA CALIDAD
+----------------------------------------------------------------------
+
+Aquí hay una idea que quiero dejar clara: la calidad no puede depender de que alguien
+se acuerde de revisar algo.
+
+[Señalar el embudo de izquierda a derecha]
+
+Imaginen un embudo con filtros. Cada cambio entra por la izquierda y tiene que pasar
+por todos:
+- En la máquina del programador: el código compila sin advertencias y con el formato
+  correcto.
+- En la solicitud de cambio: pasan todas las pruebas, las de arquitectura, las del
+  contrato y se mide qué parte del código nuevo quedó probada.
+- En seguridad: se revisa que no usemos librerías con vulnerabilidades conocidas y
+  que no se haya colado ninguna contraseña.
+- En el sistema completo: una prueba de humo con todo encendido y un ensayo en un
+  ambiente igual al real.
+
+Solo lo que pasa todos los filtros llega a producción.
+
+[Señalar el recuadro de revisión humana]
+
+¿Y las personas? Las personas revisan lo que las máquinas no ven: ¿hay algún camino
+donde digamos "recibido" sin haber guardado? ¿Dos procesos pueden pisarse? ¿Se está
+escribiendo el teléfono de un cliente en los registros? ¿El diseño se entiende?
+
+[Señalar las etiquetas verdes]
+
+Y hay reglas del equipo que todos conocemos: cada error corregido trae la prueba que
+lo reproduce; la base de datos solo cambia con migraciones nuevas; el contrato no se
+rompe; y algo que me gusta mucho: si no se puede ver en las métricas, no está
+terminado.
+
+
+----------------------------------------------------------------------
+6. IA Y AGENTES EN LA CONSTRUCCIÓN
+----------------------------------------------------------------------
+
+La versión .NET de este proyecto se construyó trabajando con un agente de
+inteligencia artificial, paso a paso. Les cuento cómo funcionó y qué aprendí.
+
+[Recorrer el ciclo del 1 al 5]
+
+1. Todo empieza con el contexto. El agente no adivina las reglas: están escritas en
+   un archivo que se llama AGENTS.md. Ahí dice cómo se nombran las cosas, qué capa
+   puede depender de cuál y qué nunca se debe hacer, como poner contraseñas en el
+   código.
+2. El agente propone un paso pequeño. No "hazme el sistema", sino "agrega esta
+   prueba", "implementa este adaptador".
+3. Ese código pasa por las mismas compuertas que el de una persona. Sin excepciones.
+4. Y después viene lo más importante: verificarlo contra el sistema real. Encenderlo
+   en contenedores, meterle carga, apagar piezas.
+5. Al final, una persona entiende el cambio y responde por él. Quien abre el cambio
+   responde por el código, lo haya escrito una persona o una máquina.
+
+[Señalar el centro]
+
+La frase que resume todo: el agente acelera, pero la verificación decide.
+
+[Señalar las etiquetas rojas]
+
+¿Por qué insisto tanto en verificar? Porque ninguno de estos problemas apareció en
+las pruebas en memoria:
+- Un límite de tamaño de los mensajes que se ignoraba en un caso.
+- Un "localhost" que apuntaba a una dirección distinta de la esperada.
+- Unas fechas que no estaban en la hora universal y mandaron 28 eventos válidos a la
+  zona de errores. Los recuperamos sin perder ninguno.
+- El procesador era cuatro veces más lento de lo que podía ser.
+- Y unos pases de seguridad que se habían colado en los resultados de una prueba de
+  carga, antes de publicarlos.
+
+Todos se encontraron verificando contra el sistema real o revisando antes de
+publicar. Esa es la lección: la IA hace más rápido el trabajo, pero no reemplaza el
+criterio.
+
+Y un riesgo que hay que nombrar: que una persona que está empezando acepte código que
+no entiende. Por eso en las revisiones se pide explicar el porqué, y se trabaja en
+pareja en las partes críticas.
+
+
+----------------------------------------------------------------------
+7. CÓMO ABORDO EL EJERCICIO DE CÓDIGO
+----------------------------------------------------------------------
+
+Para cerrar, les cuento cómo enfrento un ejercicio de código, sea escribir o revisar.
+
+[Recorrer los cuatro círculos]
+
+Cuatro pasos:
+1. Leer: ¿qué promete este código?
+2. Preguntar: ¿y si el mensaje llega dos veces? ¿Y si llega desordenado? ¿Y si el
+   programa se cae justo a la mitad?
+3. Probar: antes de arreglar, escribo la prueba que demuestra el problema.
+4. Cambiar: hago el cambio más pequeño que lo resuelve y explico por qué.
+
+[Señalar las etiquetas rojas]
+
+En sistemas de eventos siempre busco las mismas seis trampas:
+1. Confirmar que se leyó un mensaje antes de procesarlo: si el programa se cae, el
+   mensaje se pierde para siempre.
+2. Escribir datos personales en los registros.
+3. Preguntar "¿ya existe?" y después actuar. Entre la pregunta y la acción, otro
+   proceso puede colarse. La protección real es una llave única en la base de datos.
+4. Cambiar el estado directamente, saltándose las reglas del negocio.
+5. Guardar en la base de datos y publicar en Kafka por separado: si falla en medio,
+   quedan desalineados.
+6. Atrapar un error y no hacer nada con él.
+
+En la versión técnica hay un ejemplo resuelto con las seis trampas en un solo
+fragmento, y la versión corregida, que queda en cuatro líneas.
+
+[Cierre]
+
+Y la frase para llevarse: en un sistema de eventos, la pregunta más valiosa que un
+desarrollador puede hacerse es: "¿qué pasa si esto se ejecuta dos veces o se corta a
+la mitad?".
+
+
+----------------------------------------------------------------------
+SI TE HACEN PREGUNTAS, RESPUESTAS EN LENGUAJE SENCILLO
+----------------------------------------------------------------------
+
+¿Por qué no construiste directamente en Java?
+  Porque primero quise validar el diseño completo, con carga y caos, en un stack que
+  domino a fondo. El diseño se hizo pensando en Java desde el primer día: las mismas
+  piezas, los mismos contratos y las mismas pruebas. Migrar es traducir, no rediseñar.
+
+¿Por qué no usar un ORM como JPA/Hibernate?
+  Porque las garantías dependen de sentencias SQL muy precisas: insertar solo si no
+  existe y actualizar solo si la versión no cambió. Con SQL explícito se ve exactamente
+  qué se ejecuta y se prueba contra la base real. Un ORM esconde justo lo que aquí
+  importa.
+
+¿Por qué no WebFlux (programación reactiva)?
+  Porque con hilos virtuales se obtiene la misma capacidad con código más sencillo de
+  leer, depurar y probar. La complejidad reactiva no aporta aquí.
+
+¿Cómo sabes que la IA no metió algo malo?
+  Porque su código pasa por las mismas pruebas y controles que el de una persona, se
+  verifica contra el sistema real y alguien responde por él. Si no se puede explicar,
+  no entra.
+
+¿Cuánta cobertura de pruebas exiges?
+  Más que un número global, exijo que el código nuevo esté probado y que existan las
+  pruebas de las garantías: duplicados, concurrencia, fallas a la mitad. Un 90 % de
+  cobertura sin esas pruebas vale menos que un 70 % con ellas.

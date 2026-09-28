@@ -1,0 +1,355 @@
+EJE 3 · LIDERAR EL RETO CON UN EQUIPO PEQUEÑO
+Explicación narrada, en tono cercano
+==============================================
+
+Cómo usar este texto
+--------------------
+Acompaña a la vista general (eje3-vista-general.html). Cada parte corresponde a una
+diapositiva. Este eje no es técnico: habla de personas. Conviene contarlo con calma,
+con ejemplos y mirando a la gente, no a la pantalla.
+Las frases entre [corchetes] son indicaciones para ti.
+
+
+----------------------------------------------------------------------
+0. EL RETO
+----------------------------------------------------------------------
+
+Hasta ahora hablamos de la arquitectura y del código. Pero hay una verdad que todos
+los que hemos trabajado en equipos conocemos: un sistema brillante que solo entiende
+una persona es un sistema frágil.
+
+[Señalar las personas del diagrama]
+
+Imaginemos el equipo: una persona senior, dos intermedias y una o dos junior, con
+experiencia mezclada en Java, .NET, Angular y Node. Un equipo pequeño, como la
+mayoría de los equipos reales.
+
+[Señalar la frase amarilla]
+
+Y la meta de todo lo que voy a contar cabe en una frase: que el conocimiento y la
+calidad no dependan de una sola persona. Que el equipo no involucione cuando alguien
+se va de vacaciones, cambia de proyecto o simplemente tiene un mal día.
+
+[Señalar las cuatro tarjetas]
+
+Hay cuatro ideas que van a aparecer una y otra vez: escuchar antes de cambiar,
+decidir juntos, multiplicar el conocimiento en lugar de concentrarlo, y no depender
+de héroes.
+
+
+----------------------------------------------------------------------
+1. SIN HÉROES
+----------------------------------------------------------------------
+
+¿Conocen a esa persona que es la única que sabe arreglar "la cosa" cuando se cae a
+las dos de la mañana? Todos la hemos visto. Y solemos aplaudirla.
+
+Yo prefiero verlo de otra forma: si solo una persona puede resolver un problema en
+plena temporada pico, eso no es un mérito de esa persona, es un riesgo del equipo.
+
+[Señalar las tres piezas y las dos personas debajo de cada una]
+
+Por eso cada parte del sistema tiene dos personas: una responsable principal y otra
+que la conoce bien. Como en un avión, donde siempre hay piloto y copiloto.
+
+[Señalar la flecha de rotación]
+
+Y cada tres meses rotamos. Sí, eso nos cuesta un poco de velocidad al principio,
+porque alguien tiene que aprender algo nuevo. Pero compramos algo mucho más valioso:
+tranquilidad. El día que alguien falte, el equipo sigue.
+
+Y un detalle cultural importante: celebramos a quien documenta y enseña, no solo a
+quien apaga incendios.
+
+
+----------------------------------------------------------------------
+2. LOS PRIMEROS 90 DÍAS
+----------------------------------------------------------------------
+
+Aquí hay un dato del calendario que lo cambia todo. Si empezamos en octubre, el
+tercer mes cae justo en la temporada pico: Black Friday, Cyber Lunes, Navidad.
+Lanzar un sistema nuevo en esas fechas sería como cambiar el motor de un avión en
+pleno vuelo.
+
+Así que el objetivo de estos 90 días no es reemplazar nada. Es llegar al pico con el
+sistema nuevo corriendo "en sombra": recibe una copia del tráfico real, en paralelo
+al sistema actual, pero no le responde a ningún cliente. Aprendemos con volumen real
+y con riesgo cero.
+
+[Recorrer los escalones]
+
+Lo pensé como una escalera:
+
+- Mes 1, entender. Me siento uno a uno con cada persona: qué le gusta, qué le
+  frustra, qué quiere aprender. Conozco los sistemas actuales y pregunto qué falló en
+  el último pico. Y mido cómo estamos hoy, para poder demostrar después si mejoramos.
+  Busco una victoria temprana, algo pequeño pero visible, como tableros para ver lo
+  que ya existe. Y algo muy importante: no cambio nada grande todavía. Quien llega
+  cambiándolo todo pierde la confianza del equipo en la primera semana.
+
+- Mes 2, fundamentos. Con el equipo acordamos los estándares, dejamos funcionando el
+  camino automático para llevar código a producción y construimos un "esqueleto que
+  camina": la versión más simple del sistema que ya recorre todo el camino. Y las
+  primeras decisiones importantes las escribe el equipo, no yo.
+
+- Mes 3, entregar. Un piloto con un solo sistema, el TMS. Prueba de carga. El modo
+  sombra durante el pico. Y una retrospectiva para decidir, con datos reales en la
+  mano, cómo hacer la migración de verdad en enero.
+
+[Señalar la flecha de la izquierda]
+
+Fíjense que la escalera sube junto con la confianza del equipo. Primero se gana la
+confianza; después se cambian las cosas. Escuchar también es avanzar.
+
+
+----------------------------------------------------------------------
+3. INTEGRAR Y EMPODERAR
+----------------------------------------------------------------------
+
+[Señalar la gráfica]
+
+Esta gráfica no tiene datos reales: muestra la evolución que buscamos. Al principio,
+la parte morada, la del líder, es grande: hay mucho que decidir y el equipo todavía
+está conociendo el terreno. Con los meses, la parte verde, la del equipo, va creciendo.
+
+Mi trabajo como líder es que esa curva baje. Pasar de hacer a facilitar. Al final,
+el líder decide solo cuando el equipo se bloquea.
+
+[Recorrer los puntos de la derecha]
+
+¿Cómo se logra? Con hábitos concretos:
+- Cualquiera puede proponer una decisión de arquitectura y dejarla por escrito.
+- En las demos con el negocio habla quien construyó la funcionalidad, no el líder.
+  Eso da visibilidad y orgullo.
+- En las partes más delicadas trabajamos en pareja: se reparte el conocimiento y se
+  cometen menos errores.
+- La guardia del pico rota entre todos, pero las primeras veces nadie está solo.
+- Y libertad con barandas: las pruebas y controles automáticos protegen la calidad.
+  Por eso puedo dar libertad sin miedo.
+
+Una forma de verlo: las barandas de un puente no te quitan libertad; te permiten
+caminar tranquilo por el borde.
+
+
+----------------------------------------------------------------------
+4. ESTÁNDARES
+----------------------------------------------------------------------
+
+¿Quién no ha visto un documento de "buenas prácticas" de cuarenta páginas que nadie
+leyó? Un estándar que depende de que alguien se acuerde se pierde en la primera semana
+de presión.
+
+Por eso los estándares tienen que ser tres cosas: acordados, pocos y automatizados.
+
+[Recorrer el ciclo]
+
+Funciona como un ciclo:
+1. Yo llevo un borrador, para no empezar de cero.
+2. Lo discutimos en un taller con todo el equipo. Lo que el equipo co-crea, lo
+   defiende; lo que se impone, se esquiva.
+3. Lo que acordamos, lo revisa la máquina: formato, pruebas, reglas de arquitectura.
+   Así las personas pueden dedicar sus revisiones a lo interesante: el diseño.
+4. Y en cada retrospectiva nos preguntamos: ¿este estándar nos ayuda o nos estorba?
+   Si estorba, se cambia.
+
+[Señalar las etiquetas]
+
+Empezamos con cinco reglas nada más: cambios pequeños, revisión en menos de un día,
+pruebas en las reglas del negocio, contrato versionado y métricas en todo lo nuevo.
+
+Y un truco pequeño que reduce muchísimo los roces: en las revisiones de código, cada
+comentario lleva una etiqueta. Rojo, bloqueante: hay que arreglarlo. Amarillo,
+sugerencia: vale la pena conversarlo. Gris, detalle: a tu gusto. Así nadie se queda
+preguntándose si un comentario era una orden o una opinión.
+
+
+----------------------------------------------------------------------
+5. MENTORÍA
+----------------------------------------------------------------------
+
+[Señalar el diagrama de la izquierda]
+
+A la izquierda está lo que pasa en muchos equipos: todo el aprendizaje pasa por una
+sola persona, el líder. Parece eficiente, pero el líder se vuelve el cuello de
+botella, y el día que no está, todo se detiene.
+
+[Señalar el de la derecha]
+
+A la derecha, lo que buscamos: una red. El líder acompaña a la persona senior y a una
+intermedia, y ellas acompañan a quienes están empezando. El líder acompaña a quienes
+acompañan. El conocimiento se multiplica.
+
+¿Cómo se ve en la práctica? Cada persona tiene un plan acordado en su conversación uno
+a uno. Por ejemplo, alguien junior quiere aprender sobre resiliencia: entonces se
+vuelve el segundo responsable del notificador, que es justo la pieza que maneja
+reintentos y fallas. Aprende con un propósito real, no con ejercicios de libro.
+
+[Señalar las etiquetas]
+
+Usamos formatos variados: trabajo en pareja, ejercicios cortos, análisis de incidentes
+en grupo y un espacio semanal para preguntar lo que sea.
+
+Y una regla sobre la inteligencia artificial que me parece clave para quien está
+empezando: "pídele que te explique por qué", no solo "pídele que lo haga". La IA puede
+ser una gran tutora o una muleta; depende de cómo se use.
+
+
+----------------------------------------------------------------------
+6. CÓMO RESOLVER UN DESACUERDO TÉCNICO
+----------------------------------------------------------------------
+
+Empiezo por algo que quiero que quede claro: los desacuerdos son sanos. Un equipo
+donde nadie discrepa es un equipo donde nadie piensa, o donde nadie se atreve a
+hablar. Lo que no es sano es resolverlos por jerarquía o por quién habla más fuerte.
+
+Pongamos un ejemplo real: una persona quiere usar Kafka para el notificador y otra
+prefiere RabbitMQ. Los dos tienen argumentos.
+
+[Recorrer los cinco pasos]
+
+1. Criterios primero. Antes de hablar de herramientas, nos ponemos de acuerdo en qué
+   nos importa: ¿no perder mensajes? ¿poder reprocesar? ¿lo que el equipo ya sabe
+   operar? Muchas discusiones se resuelven solo con este paso.
+2. Datos, no opiniones. Una prueba de dos días con las dos opciones vale más que dos
+   semanas de debate.
+3. ¿Se puede deshacer? Si la decisión es fácil de revertir, como el nombre de una
+   librería, se decide rápido. Si es difícil, como elegir el sistema de mensajería, se
+   analiza con más cuidado.
+4. Tiempo límite. Si al final del plazo no hay acuerdo, decido yo, explico por qué y lo
+   dejo escrito con las opciones que descartamos.
+5. Comprometerse. Una vez decidido, todos reman hacia el mismo lado, incluso quien
+   defendía la otra opción. Y si después los datos muestran que nos equivocamos, lo
+   revisamos sin buscar culpables.
+
+Y siempre le agradezco a quien defendió la opción que no ganó: su argumento hizo
+mejor la decisión.
+
+
+----------------------------------------------------------------------
+7. UNA CONVERSACIÓN, DOS PERSONAS MUY DISTINTAS
+----------------------------------------------------------------------
+
+Esta es una de mis partes favoritas, porque pasa todo el tiempo.
+
+[Señalar las dos cajas]
+
+En la misma sala están dos personas que necesitan cosas muy distintas:
+- El líder de producto necesita decidir. Le importa el impacto: el riesgo, el costo,
+  el tiempo y la experiencia del cliente.
+- Un desarrollador con menos experiencia necesita entender el porqué y, sobre todo,
+  sentirse seguro para preguntar sin quedar mal.
+
+[Señalar al líder técnico en el centro]
+
+Mi trabajo en esa reunión es tender un puente hacia cada uno.
+
+Imaginemos que producto pide agregar avisos por WhatsApp antes de Black Friday.
+
+[Recorrer los cinco pasos de abajo]
+
+1. Empiezo por el cliente: "El cliente quiere saber dónde está su paquete". Eso lo
+   entiende todo el mundo, sin importar cuánto sepa de tecnología.
+2. Dibujo en el tablero en vez de usar jerga. Y si se me escapa una palabra técnica,
+   la traduzco en el momento.
+3. Presento opciones, no un "no". En lugar de "eso no se puede antes del pico", digo:
+   "podemos hacerlo antes del pico con riesgo de inestabilidad en la semana más
+   fuerte, o en enero sin riesgo. ¿Qué prefieres?". Así producto decide con
+   información, y la decisión es compartida.
+4. Le doy la voz a la persona junior. Por ejemplo: "Tú construiste los reintentos,
+   ¿nos cuentas qué pasa cuando el SMS se cae?". Eso sí: lo preparamos antes, para que
+   brille y no se sienta examinada. Y luego le pregunto su opinión: "¿Qué te preocupa
+   de esta opción?". Muchas veces ve cosas que los demás no vemos.
+5. Cierro por escrito: qué decidimos, por qué y quién hace qué. Nadie sale de la sala
+   con dudas.
+
+¿Qué pasa cuando se hace así? Producto conoce a quien realmente construye el sistema,
+y esa persona gana confianza y contexto de negocio. Todos salen ganando.
+
+Y cuando hay que corregir algo, uso el modelo SCI: situación, comportamiento e
+impacto. Por ejemplo: "En el cambio de ayer, el consumidor confirma antes de guardar;
+si el proceso se cae justo ahí, perdemos el evento. ¿Cómo lo resolverías?". Fíjense
+que termino con una pregunta, no con la respuesta. Y las críticas, siempre en privado;
+los reconocimientos, en público.
+
+
+----------------------------------------------------------------------
+8. ¿CÓMO SABEMOS QUE EL EQUIPO CRECE?
+----------------------------------------------------------------------
+
+Todo esto suena bien, pero ¿cómo sabemos que funciona? Con señales concretas,
+comparadas contra lo que medimos en el primer mes.
+
+[Recorrer las tarjetas]
+
+- Que cada parte del sistema la dominen al menos dos personas.
+- Que las decisiones importantes las escriban distintas personas, no solo el líder.
+- Que alguien nuevo pueda llevar su primer cambio a producción en menos de dos
+  semanas. Si tarda más, el problema no es la persona: es nuestra documentación.
+- Que la velocidad no se consiga rompiendo cosas.
+- Y que el ánimo del equipo sea sostenible: que nadie se queme en el pico.
+
+[Señalar la curva verde]
+
+Y esta curva es la que más me emociona. Es el camino que imaginamos para una persona
+que llega como junior: empieza como segunda responsable del notificador, hace su
+primera guardia acompañada, se convierte en responsable principal y, al final,
+acompaña a quien llega después.
+
+Ese es para mí el mayor logro de un líder: que quienes llegaron aprendiendo hoy
+enseñen a otros.
+
+
+----------------------------------------------------------------------
+9. LA PRUEBA REAL DEL LIDERAZGO
+----------------------------------------------------------------------
+
+Para cerrar, les pido que imaginen una escena.
+
+[Leer la escena con calma]
+
+Es el Cyber Lunes de 2027. El volumen se multiplica por cuatro desde las seis de la
+mañana. A las once se cae el proveedor de SMS durante cuarenta minutos, y nadie fuera
+del equipo se entera, porque los mensajes salen por correo. Un cliente en Barranquilla
+ve que su paquete salió a reparto segundos después de que el mensajero lo escaneó. Al
+día siguiente, la reconciliación confirma: cero eventos perdidos.
+
+[Pausa]
+
+Y el líder técnico estaba de vacaciones esa semana.
+
+Esa última frase es la prueba real del liderazgo. Un buen líder no se mide por lo que
+resuelve, sino por lo que el equipo logra cuando no está.
+
+El éxito no es tener la tecnología más moderna ni decenas de microservicios. Es un
+sistema aburrido en temporada pico y un equipo orgulloso de lo que construyó.
+
+
+----------------------------------------------------------------------
+SI TE HACEN PREGUNTAS, RESPUESTAS EN LENGUAJE SENCILLO
+----------------------------------------------------------------------
+
+¿Qué haces si una persona del equipo no acepta una decisión?
+  Primero la escucho en privado: a veces tiene un dato que no vimos. Si la decisión se
+  mantiene, le explico el porqué y le pido que la saquemos adelante juntos, con una
+  fecha para revisar si los datos le dan la razón. Discrepar está bien; sabotear no.
+
+¿Y si una persona junior comete un error que llega a producción?
+  Hacemos un análisis sin culpables: ¿qué permitió el sistema que esto pasara? Esa
+  persona participa en el análisis y en la solución. Suele aprender más ahí que en
+  meses de trabajo normal, y el equipo gana una nueva protección.
+
+¿Cómo equilibras la presión de producto con la calidad?
+  Acordamos un porcentaje fijo de cada ciclo, por ejemplo el 20 %, para calidad y
+  deuda técnica, y lo hacemos visible. Así no hay que negociarlo cada vez. Y la deuda
+  técnica la explico como riesgo de negocio: "hoy un error tarda cuatro horas en
+  diagnosticarse; con esta mejora, veinte minutos".
+
+¿Qué haces si alguien del equipo se resiste al cambio?
+  Lo involucro en diseñarlo. La resistencia suele venir de sentir que algo se impone.
+  Cuando alguien co-crea el estándar o escribe la decisión, pasa de resistir a
+  defender.
+
+¿Cómo evitas volverte tú el cuello de botella?
+  Mentoreando a los mentores, dejando que otros escriban las decisiones y que
+  presenten las demos, y midiendo cuántas cosas dependen de mí. Si ese número no baja
+  con el tiempo, estoy haciendo algo mal.

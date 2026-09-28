@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eje 2 · Técnica</title>
+<script src="acceso.js"></script>
+<script src="sesion.js"></script>
+<script>TCC.exigir({ soloAdmin: true })</script>
+<script src="reloj.js"></script>
+<style>
+  :root {
+    --fondo: #0b1016; --panel: #121a23; --panel2: #17212c; --borde: #243242; --texto: #dbe4ee; --tenue: #8a9bb0;
+    --azul: #4ea1ff; --naranja: #ff9f43; --verde: #3ddc97; --morado: #b388ff; --rojo: #ff6b6b; --gris: #6b7b8f; --amarillo: #ffd166;
+    --mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; }
+  nav { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 4px; padding: 10px 20px;
+        background: rgba(11,16,22,.92); backdrop-filter: blur(6px); border-bottom: 1px solid var(--borde); overflow-x: auto; }
+  nav .marca { font-weight: 700; margin-right: 14px; white-space: nowrap; }
+  nav a { color: var(--tenue); text-decoration: none; padding: 5px 10px; border-radius: 6px; white-space: nowrap; font-size: 13px; }
+  nav a:hover, nav a.activo { color: var(--texto); background: var(--panel2); }
+  nav a.salto { color: var(--azul); border: 1px solid var(--borde); }
+  nav .ayuda { margin-left: auto; color: var(--gris); font-size: 12px; white-space: nowrap; padding-left: 12px; }
+  main { max-width: 1280px; margin: 0 auto; padding: 0 20px 60px; }
+  section { padding: 34px 0 20px; border-bottom: 1px solid var(--borde); min-height: 70vh; }
+  h1 { font-size: 30px; margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 0 0 4px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); color: var(--azul); font-size: 15px; }
+  h3 { font-size: 15px; margin: 0 0 10px; color: var(--texto); }
+  .sub { color: var(--tenue); margin: 0 0 20px; }
+  .aviso { border: 1px solid #6b541f; background: #2b2710; color: var(--amarillo); border-radius: 8px; padding: 8px 12px; font-size: 13.5px; margin: 0 0 18px; }
+  .grid { display: grid; gap: 14px; }
+  .g2 { grid-template-columns: repeat(2, 1fr); } .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 1000px) { .g3, .g4 { grid-template-columns: repeat(2, 1fr); } .g2 { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 16px; min-width: 0; }
+  .kpi .v { font-size: 26px; font-weight: 700; font-family: var(--mono); line-height: 1.2; }
+  .kpi .l { color: var(--tenue); font-size: 12.5px; margin-top: 4px; }
+  .ok { color: var(--verde); } .warn { color: var(--amarillo); } .bad { color: var(--rojo); } .az { color: var(--azul); } .na { color: var(--naranja); } .mo { color: var(--morado); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+  th { color: var(--tenue); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  code, .mono { font-family: var(--mono); font-size: 12.5px; }
+  code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; color: #ffcf99; }
+  pre.codigo { margin: 0; background: #0a0f15; border: 1px solid var(--borde); border-radius: 8px; padding: 12px 14px; overflow-x: auto;
+               font-family: var(--mono); font-size: 12.5px; line-height: 1.5; color: var(--texto); }
+  pre.codigo .c { color: #6b7b8f; font-style: italic; } pre.codigo .a { color: var(--amarillo); } pre.codigo .s { color: #a5d6a7; } pre.codigo .k { color: #c792ea; }
+  pre.codigo.malo { border-color: #6b2a2a; } pre.codigo.bueno { border-color: #1f6b4f; }
+  .rotulo { font-size: 12px; color: var(--tenue); margin: 0 0 6px; font-family: var(--mono); }
+  .tag { display: inline-block; font-size: 11px; font-family: var(--mono); padding: 1px 7px; border-radius: 999px; border: 1px solid var(--borde); color: var(--tenue); margin: 2px 3px 2px 0; }
+  .tag.v { border-color: #1f6b4f; color: var(--verde); } .tag.a { border-color: #6b541f; color: var(--amarillo); } .tag.r { border-color: #6b2a2a; color: var(--rojo); }
+  ul.limpia { list-style: none; padding: 0; margin: 0; } ul.limpia li { padding: 5px 0 5px 20px; position: relative; } ul.limpia li::before { content: "›"; position: absolute; left: 4px; color: var(--azul); font-weight: 700; }
+  ol.pasos { margin: 0; padding-left: 20px; } ol.pasos li { padding: 4px 0; }
+  .nota { font-size: 12.5px; color: var(--tenue); margin-top: 10px; }
+  .pie { color: var(--gris); font-size: 12px; padding: 24px 0; text-align: center; }
+  .hallazgo { display: grid; grid-template-columns: 28px 1fr; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--borde); font-size: 13.5px; }
+  .hallazgo .n { font-family: var(--mono); color: var(--rojo); font-weight: 700; }
+  @media print { nav { display: none; } section { break-after: page; min-height: auto; } }
+</style>
+</head>
+<body>
+<nav id="nav">
+  <span class="marca">TCC · Eventos de guías <span class="mono" style="color:var(--azul)">Eje 2</span></span>
+  <a class="salto" href="index.html">⌂ Inicio</a>
+  <a class="salto" href="eje2-vista-general.html">← Vista general</a>
+  <a href="#inicio">Resumen</a>
+  <a href="#estructura">Estructura</a>
+  <a href="#equivalencias">.NET → Java</a>
+  <a href="#codigo">Código clave</a>
+  <a href="#consumo">Kafka en Spring</a>
+  <a href="#pruebas">Pruebas</a>
+  <a href="#calidad">Calidad</a>
+  <a href="#ia">IA y agentes</a>
+  <a href="#ejercicio">Ejercicio</a>
+  <span class="ayuda">← → para navegar</span>
+</nav>
+
+<main>
+
+<!-- ============ RESUMEN ============ -->
+<section id="inicio">
+  <h1>Eje 2 · Desarrollo y calidad</h1>
+  <p class="sub">Cómo se estructura el servicio en <b>Java / Spring Boot</b>, qué se prueba, cómo se asegura la calidad y cómo se usa y se verifica la IA en la construcción.</p>
+  <p class="aviso">Diseño propuesto: la implementación de referencia está en .NET 10 y fue verificada. La versión Java reutiliza los mismos contratos, tópicos, migraciones y reglas; los fragmentos de esta página muestran cómo quedaría y todavía no están compilados en el repositorio.</p>
+
+  <div class="grid g4">
+    <div class="card kpi"><div class="v az">7</div><div class="l">módulos Maven, los mismos 7 proyectos de la versión .NET (dominio → hosts)</div></div>
+    <div class="card kpi"><div class="v ok">151</div><div class="l">pruebas de la versión .NET que se portan primero y sirven de especificación para Java</div></div>
+    <div class="card kpi"><div class="v">0</div><div class="l">librerías exclusivas de .NET en el diseño: cada pieza tiene su par en Java (ADR-0012)</div></div>
+    <div class="card kpi"><div class="v na">1</div><div class="l">base de datos, tópicos y contratos compartidos: .NET y Java pueden convivir en el mismo clúster</div></div>
+  </div>
+
+  <div class="grid g3" style="margin-top:14px">
+    <div class="card"><h3 class="az">Estructura</h3><ul class="limpia"><li>Hexagonal con módulos Maven: la regla de dependencias la impone el <b>compilador</b></li><li>Dominio en Java puro, sin Spring</li><li>Spring solo en los bordes (hosts e infraestructura)</li></ul></div>
+    <div class="card"><h3 class="ok">Pruebas y calidad</h3><ul class="limpia"><li>JUnit 5 + AssertJ, falsos escritos a mano</li><li>Testcontainers con Kafka y PostgreSQL reales</li><li>ArchUnit, contrato OpenAPI, JaCoCo, compuertas en CI</li></ul></div>
+    <div class="card"><h3 class="mo">IA en la construcción</h3><ul class="limpia"><li>El agente trabaja con reglas escritas (<code>AGENTS.md</code>)</li><li>Mismas compuertas que el código humano</li><li>Verificación contra el sistema real, obligatoria</li></ul></div>
+  </div>
+</section>
+
+<!-- ============ ESTRUCTURA ============ -->
+<section id="estructura">
+  <h2><span class="num">01</span>Estructura del servicio en Java / Spring</h2>
+  <p class="sub">Un proyecto Maven con 7 módulos. Las flechas del <code>pom.xml</code> son la arquitectura: si el dominio no tiene Spring en su classpath, no puede usarlo aunque alguien quiera.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>Árbol del proyecto</h3>
+<pre class="codigo">tcc-eventos/                      <span class="c">pom padre: versiones, plugins, compuertas</span>
+├── tcc-dominio/                  <span class="c">Java puro · 0 dependencias</span>
+│   └── co.tcc.eventos.dominio     Guia, EventoGuia, MaquinaEstados, EstadoGuia
+├── tcc-aplicacion/               <span class="c">→ dominio (+ slf4j-api)</span>
+│   ├── casosuso                   RecibirEvento, ProcesarEvento, NotificarCambioEstado
+│   ├── puertos                    PublicadorEventos, RepositorioGuias, FiltroDuplicados…
+│   └── decoradores                PublicadorConContingencia, FiltroDuplicadosTolerante
+├── tcc-contratos/                <span class="c">records V1 · 0 dependencias</span>
+├── tcc-infraestructura/          <span class="c">→ aplicacion, contratos</span>
+│   ├── kafka                      ProductorKafka, PublicadorKafka, PublicadorConCircuito
+│   ├── postgres                   RepositorioGuiasJdbc, AlmacenContingenciaJdbc, RelayBandejaSalida
+│   ├── redis                      FiltroDuplicadosRedis
+│   └── observabilidad             métricas tcc_*, propagación de contexto
+├── tcc-api/                      <span class="c">Spring Boot · Web MVC + Security</span>
+├── tcc-procesador/               <span class="c">Spring Boot · Spring Kafka</span>
+└── tcc-notificador/              <span class="c">Spring Boot · Spring Kafka</span>
+db/migraciones/                   <span class="c">Flyway V1–V4, compartidas con .NET</span></pre>
+    </div>
+    <div class="card">
+      <h3>Reglas de diseño</h3>
+      <ul class="limpia">
+        <li><b>El dominio y la aplicación no conocen Spring.</b> Los casos de uso son clases normales; se crean con <code>@Bean</code> en cada host (composition root). Se prueban sin levantar contexto.</li>
+        <li><b>Interfaces sin prefijo <code>I</code></b> (convención Java): <code>PublicadorEventos</code>, implementado por <code>PublicadorKafka</code>.</li>
+        <li><b>Código síncrono sobre hilos virtuales</b> (Java 21+) en lugar de <code>async/await</code>: la misma concurrencia con código más simple de leer y probar.</li>
+        <li><b>Inmutabilidad:</b> <code>record</code> para eventos, contratos y resultados; <code>Guia</code> con campos privados y sin setters.</li>
+        <li><b>Resultados explícitos</b> (<code>enum</code> + <code>switch</code> exhaustivo) en lugar de excepciones para el flujo normal: <code>APLICADO</code>, <code>DUPLICADO</code>, <code>TARDIO</code>, <code>TRANSICION_INVALIDA</code>.</li>
+        <li><b>Configuración 100 % por variables de entorno</b> (<code>@ConfigurationProperties</code> validadas al arrancar).</li>
+      </ul>
+      <h3 style="margin-top:14px">Stack</h3>
+      <span class="tag">Java 21+ LTS</span><span class="tag">Spring Boot 3.x</span><span class="tag">Maven</span><span class="tag">Spring Kafka</span><span class="tag">JdbcClient</span><span class="tag">Flyway</span><span class="tag">Resilience4j</span><span class="tag">Spring Security OAuth2</span><span class="tag">Bucket4j</span><span class="tag">OpenTelemetry</span><span class="tag">Micrometer</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EQUIVALENCIAS ============ -->
+<section id="equivalencias">
+  <h2><span class="num">02</span>De .NET a Java: pieza por pieza</h2>
+  <p class="sub">El diseño .NET evitó a propósito librerías sin equivalente en Java (ADR-0012). Por eso la migración es una traducción, no un rediseño.</p>
+
+  <div class="card">
+    <table>
+      <tr><th>Necesidad</th><th>.NET (implementado)</th><th>Java / Spring (diseño)</th><th>Nota</th></tr>
+      <tr><td>Endpoints HTTP</td><td>Minimal APIs</td><td>Spring Web MVC + hilos virtuales</td><td>Síncrono, sin WebFlux: más simple y suficiente</td></tr>
+      <tr><td>Errores HTTP</td><td>ProblemDetails</td><td><code>ProblemDetail</code> (RFC 9457) + <code>@RestControllerAdvice</code></td><td>Mismo cuerpo de error</td></tr>
+      <tr><td>Validación del contrato</td><td>Validador propio</td><td>Jakarta Bean Validation (<code>@Valid</code>)</td><td>Estándar de la plataforma</td></tr>
+      <tr><td>JWT y alcances</td><td>JwtBearer</td><td><code>spring-boot-starter-oauth2-resource-server</code></td><td><code>SCOPE_eventos:escribir</code>; solo RS256</td></tr>
+      <tr><td>Límite por cliente</td><td>RateLimiter (token bucket)</td><td>Bucket4j</td><td>429 + <code>Retry-After</code></td></tr>
+      <tr><td>Circuito</td><td>Polly</td><td>Resilience4j <code>CircuitBreaker</code></td><td>Mismos umbrales</td></tr>
+      <tr><td>Kafka</td><td>Confluent.Kafka + DespachadorParticiones</td><td>Spring Kafka (<code>kafka-clients</code>)</td><td>Ver sección de consumo</td></tr>
+      <tr><td>PostgreSQL</td><td>Npgsql (SQL explícito, batch)</td><td><code>JdbcClient</code> + <code>TransactionTemplate</code></td><td>Mismo SQL; sin ORM a propósito</td></tr>
+      <tr><td>Redis</td><td>StackExchange.Redis</td><td>Lettuce (Spring Data Redis)</td><td><code>SET NX EX</code></td></tr>
+      <tr><td>Migraciones</td><td>Flyway (contenedor)</td><td>Flyway</td><td>Los mismos archivos <code>V1–V4</code></td></tr>
+      <tr><td>Salud</td><td><code>/salud/viva</code>, <code>/salud/lista</code></td><td>Actuator: grupos <code>liveness</code> / <code>readiness</code></td><td>Mismas rutas por configuración</td></tr>
+      <tr><td>Observabilidad</td><td>OpenTelemetry .NET</td><td>Agente OpenTelemetry Java + Micrometer</td><td>Mismo Collector, Jaeger, Prometheus, Loki</td></tr>
+      <tr><td>Pruebas</td><td>xUnit + Assert nativo</td><td>JUnit 5 + AssertJ</td><td>Mismos nombres de prueba en español</td></tr>
+      <tr><td>Integración</td><td>Testcontainers .NET</td><td>Testcontainers Java + <code>@ServiceConnection</code></td><td>Kafka y PostgreSQL reales</td></tr>
+      <tr><td>Arquitectura</td><td>Pruebas por reflexión</td><td>Módulos Maven + ArchUnit</td><td>El compilador impone las capas</td></tr>
+      <tr><td>Imagen</td><td>Chiseled + ReadyToRun</td><td>Distroless (Jib o capas) + CDS</td><td>Sin shell, usuario no root</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ CODIGO ============ -->
+<section id="codigo">
+  <h2><span class="num">03</span>Código clave (del centro hacia afuera)</h2>
+  <p class="sub">Los mismos nombres y reglas que en .NET. Primero el dominio, que es Java puro; después el caso de uso y el decorador; por último Spring, en el borde.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <p class="rotulo">tcc-dominio · Guia.java</p>
+<pre class="codigo"><span class="c">/** Única que decide si un evento cambia su estado. Sin setters. */</span>
+<span class="k">public final class</span> Guia {
+  <span class="k">private final</span> String numeroGuia;
+  <span class="k">private</span> EstadoGuia estadoActual;
+  <span class="k">private</span> OffsetDateTime ultimoEventoEn;
+  <span class="k">private long</span> version;
+
+  <span class="k">public static</span> Guia crear(EventoGuia primero) {
+    <span class="k">return new</span> Guia(primero.numeroGuia(), primero.estado(), primero.ocurridoEn(), 1);
+  }
+
+  <span class="k">public</span> ResultadoAplicacion aplicar(EventoGuia evento) {
+    <span class="k">if</span> (!evento.numeroGuia().equals(numeroGuia))
+      <span class="k">throw new</span> IllegalArgumentException(<span class="s">"Evento de otra guía"</span>);
+    <span class="k">if</span> (evento.ocurridoEn().isBefore(ultimoEventoEn))
+      <span class="k">return</span> ResultadoAplicacion.TARDIO;          <span class="c">// no retrocede</span>
+    <span class="k">if</span> (!MaquinaEstados.puedeTransitar(estadoActual, evento.estado()))
+      <span class="k">return</span> ResultadoAplicacion.TRANSICION_INVALIDA;
+    estadoActual = evento.estado();
+    ultimoEventoEn = evento.ocurridoEn();
+    version++;
+    <span class="k">return</span> ResultadoAplicacion.APLICADO;
+  }
+}</pre>
+    </div>
+    <div class="card">
+      <p class="rotulo">tcc-aplicacion · RecibirEvento.java</p>
+<pre class="codigo"><span class="c">/** Deja el evento guardado de forma durable. Sin Spring. */</span>
+<span class="k">public final class</span> RecibirEvento {
+  <span class="k">private final</span> PublicadorEventos publicador;
+  <span class="k">private final</span> FiltroDuplicados filtro;
+
+  <span class="k">public</span> RecibirEvento(PublicadorEventos publicador, FiltroDuplicados filtro) {
+    <span class="k">this</span>.publicador = publicador;
+    <span class="k">this</span>.filtro = filtro;
+  }
+
+  <span class="k">public</span> ResultadoRecepcion ejecutar(EventoGuia evento) {
+    <span class="k">if</span> (filtro.yaRecibido(evento.idEvento()))
+      <span class="k">return</span> ResultadoRecepcion.DUPLICADO;
+    publicador.publicar(evento);
+    <span class="c">// Se marca DESPUÉS de publicar: si la publicación falla,</span>
+    <span class="c">// el reintento del emisor no se descarta como duplicado.</span>
+    filtro.marcarRecibido(evento.idEvento());
+    <span class="k">return</span> ResultadoRecepcion.ACEPTADO;
+  }
+}</pre>
+    </div>
+    <div class="card">
+      <p class="rotulo">tcc-aplicacion · PublicadorConContingencia.java (patrón Decorador)</p>
+<pre class="codigo"><span class="c">/** Nunca 202 sin almacenamiento durable: si nadie lo guarda, falla (→ 503). */</span>
+<span class="k">public final class</span> PublicadorConContingencia <span class="k">implements</span> PublicadorEventos {
+  <span class="k">private final</span> PublicadorEventos principal;
+  <span class="k">private final</span> AlmacenContingencia contingencia;
+
+  <span class="a">@Override</span>
+  <span class="k">public void</span> publicar(EventoGuia evento) {
+    <span class="k">try</span> {
+      principal.publicar(evento);
+      <span class="k">return</span>;
+    } <span class="k">catch</span> (PublicacionFallidaException e) {
+      log.debug(<span class="s">"Kafka no disponible; {} a contingencia"</span>, evento.idEvento(), e);
+    }
+    <span class="k">try</span> {
+      contingencia.guardar(evento);
+    } <span class="k">catch</span> (RuntimeException e) {
+      <span class="k">throw new</span> PublicacionFallidaException(
+          <span class="s">"Ni Kafka ni la contingencia guardaron "</span> + evento.idEvento(), e);
+    }
+  }
+}</pre>
+    </div>
+    <div class="card">
+      <p class="rotulo">tcc-api · ConfiguracionRecepcion.java (composition root)</p>
+<pre class="codigo"><span class="c">// Spring solo arma el grafo; el orden de los decoradores queda a la vista:</span>
+<span class="c">// Contingencia( Circuito( Kafka ) )</span>
+<span class="a">@Configuration</span>
+<span class="k">class</span> ConfiguracionRecepcion {
+
+  <span class="a">@Bean</span>
+  RecibirEvento recibirEvento(ProductorKafka productor, CircuitBreaker circuito,
+                              AlmacenContingenciaJdbc contingencia,
+                              FiltroDuplicadosRedis redis) {
+    PublicadorEventos kafka = <span class="k">new</span> PublicadorKafka(productor);
+    PublicadorEventos conCircuito = <span class="k">new</span> PublicadorConCircuito(kafka, circuito);
+    PublicadorEventos publicador = <span class="k">new</span> PublicadorConContingencia(conCircuito, contingencia);
+    FiltroDuplicados filtro = <span class="k">new</span> FiltroDuplicadosTolerante(redis);  <span class="c">// Redis caído ≠ 503</span>
+    <span class="k">return new</span> RecibirEvento(publicador, filtro);
+  }
+}</pre>
+    </div>
+    <div class="card">
+      <p class="rotulo">tcc-api · EventosGuiaController.java</p>
+<pre class="codigo"><span class="a">@RestController</span>
+<span class="a">@RequestMapping</span>(<span class="s">"/api/v1/eventos-guia"</span>)
+<span class="k">class</span> EventosGuiaController {
+
+  <span class="a">@PostMapping</span>
+  <span class="a">@PreAuthorize</span>(<span class="s">"hasAuthority('SCOPE_eventos:escribir')"</span>)
+  ResponseEntity&lt;Void&gt; recibir(<span class="a">@Valid @RequestBody</span> EventoGuiaV1 cuerpo,
+                               JwtAuthenticationToken token) {
+    autorizador.verificarOrigen(token, cuerpo.origen()); <span class="c">// 403 si suplanta</span>
+    <span class="k">return switch</span> (recibirEvento.ejecutar(Mapeador.aDominio(cuerpo))) {
+      <span class="k">case</span> ACEPTADO  -&gt; ResponseEntity.accepted().build(); <span class="c">// 202 durable</span>
+      <span class="k">case</span> DUPLICADO -&gt; ResponseEntity.ok().build();       <span class="c">// 200 sin efecto</span>
+    };
+  }
+}
+
+<span class="c">// En @RestControllerAdvice:</span>
+<span class="a">@ExceptionHandler</span>(PublicacionFallidaException.<span class="k">class</span>)
+ResponseEntity&lt;ProblemDetail&gt; sinDurabilidad() {
+  <span class="k">return</span> ResponseEntity.status(503).header(<span class="s">"Retry-After"</span>, <span class="s">"5"</span>)
+      .body(ProblemDetail.forStatus(503));             <span class="c">// sin detalles internos</span>
+}</pre>
+    </div>
+    <div class="card">
+      <p class="rotulo">tcc-infraestructura · RepositorioGuiasJdbc.java (inbox + estado + outbox)</p>
+<pre class="codigo"><span class="a">@Override</span>
+<span class="k">public void</span> guardar(Guia guia, EventoGuia evento, ResultadoAplicacion resultado,
+                   EstadoGuia estadoAnterior) {
+  transaccion.executeWithoutResult(tx -&gt; {
+    <span class="k">int</span> historial = jdbc.sql(<span class="s">"""
+        INSERT INTO historial_eventos (id_evento, numero_guia, estado, ocurrido_en,
+                                       origen, novedad, resultado)
+        VALUES (:id, :guia, :estado, :ocurrido, :origen, :novedad, :resultado)
+        ON CONFLICT (id_evento) DO NOTHING"""</span>)
+        .params(parametros(evento, resultado)).update();
+    <span class="k">if</span> (historial != 1) <span class="k">throw new</span> ConflictoConcurrenciaException(guia.numeroGuia());
+    <span class="k">if</span> (resultado != APLICADO) <span class="k">return</span>;             <span class="c">// tardío/inválido: solo historial</span>
+
+    <span class="k">int</span> filas = estadoAnterior == <span class="k">null</span>
+        ? insertarGuia(guia)                             <span class="c">// ON CONFLICT DO NOTHING</span>
+        : actualizarGuia(guia);                          <span class="c">// WHERE version = :anterior</span>
+    <span class="k">if</span> (filas != 1) <span class="k">throw new</span> ConflictoConcurrenciaException(guia.numeroGuia());
+
+    insertarEnBandejaSalida(guia, evento, estadoAnterior);  <span class="c">// outbox, misma tx</span>
+  });                                                    <span class="c">// excepción ⇒ rollback de todo</span>
+}</pre>
+    </div>
+  </div>
+  <p class="nota">En .NET las tres escrituras viajan en un solo <code>NpgsqlBatch</code>; en Java son tres sentencias en la misma transacción (o un batch JDBC con <code>reWriteBatchedInserts</code>). La garantía la dan las llaves primarias y la versión, no el viaje a la base.</p>
+</section>
+
+<!-- ============ CONSUMO ============ -->
+<section id="consumo">
+  <h2><span class="num">04</span>Kafka en Spring: consumo, reintentos y DLQ</h2>
+  <p class="sub">Spring Kafka ya trae los patrones que en .NET se construyeron a mano. Se usan sin cambiar los nombres de tópicos ni grupos, para que .NET y Java sean intercambiables.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <p class="rotulo">tcc-procesador · reintento bloqueante (el orden es sagrado)</p>
+<pre class="codigo"><span class="a">@KafkaListener</span>(topics = <span class="s">"guias.eventos.recibidos"</span>, groupId = <span class="s">"procesador-estado"</span>,
+               concurrency = <span class="s">"${procesador.hilos:6}"</span>)  <span class="c">// ≤ particiones asignadas</span>
+<span class="k">void</span> procesar(ConsumerRecord&lt;String, String&gt; registro, Acknowledgment ack) {
+  procesarEvento.ejecutar(lector.leer(registro));  <span class="c">// ilegible ⇒ MensajeInvalidoException</span>
+  ack.acknowledge();                               <span class="c">// offset DESPUÉS del commit en la base</span>
+}
+
+<span class="a">@Bean</span>
+DefaultErrorHandler manejoErrores(DeadLetterPublishingRecoverer dlq) {
+  <span class="k">var</span> espera = <span class="k">new</span> ExponentialBackOff(<span class="s">200</span>, <span class="s">2.0</span>);
+  espera.setMaxInterval(<span class="s">30_000</span>);                   <span class="c">// sin límite de intentos:</span>
+  <span class="k">var</span> manejador = <span class="k">new</span> DefaultErrorHandler(dlq, espera); <span class="c">// la base caída se espera</span>
+  manejador.addNotRetryableExceptions(MensajeInvalidoException.<span class="k">class</span>); <span class="c">// poison ⇒ DLQ</span>
+  <span class="k">return</span> manejador;
+}</pre>
+      <p class="nota">Cada hilo del contenedor es dueño de sus particiones: se conserva el orden por guía y las particiones avanzan en paralelo, que es lo que hace <code>DespachadorParticiones</code> en .NET. Asignación <code>cooperative-sticky</code> y commits manuales.</p>
+    </div>
+    <div class="card">
+      <p class="rotulo">tcc-notificador · reintento no bloqueante (el flujo es sagrado)</p>
+<pre class="codigo"><span class="c">// Escalera explícita con los mismos tópicos que .NET:</span>
+<span class="c">// guias.estados.cambiados → notificaciones.reintento.1m → .10m → .1h</span>
+<span class="c">//                         → canal alterno (correo) → notificaciones.dlq</span>
+<span class="a">@KafkaListener</span>(topics = {<span class="s">"notificaciones.reintento.1m"</span>,
+                          <span class="s">"notificaciones.reintento.10m"</span>,
+                          <span class="s">"notificaciones.reintento.1h"</span>},
+               groupId = <span class="s">"notificador-reintentos"</span>)
+<span class="k">void</span> reintentar(ConsumerRecord&lt;String, String&gt; registro, Acknowledgment ack) {
+  <span class="k">var</span> mensaje = lector.leer(registro);
+  esperarHasta(mensaje.reintentarEn());           <span class="c">// pausa la partición, no el hilo</span>
+  <span class="k">switch</span> (notificar.ejecutar(mensaje)) {
+    <span class="k">case</span> ENVIADO, YA_ENVIADO, OBSOLETO -&gt; { }       <span class="c">// idempotencia guía:versión:canal</span>
+    <span class="k">case</span> PROVEEDOR_CAIDO -&gt; enrutador.siguienteEtapa(mensaje);
+  }
+  ack.acknowledge();
+}</pre>
+      <p class="nota">Spring Kafka ofrece <code>@RetryableTopic</code>, que hace lo mismo con tópicos generados. Se prefiere el enrutador explícito para conservar los nombres de tópicos y grupos de .NET: así ambas versiones pueden convivir durante la migración.</p>
+    </div>
+  </div>
+  <div class="grid g3" style="margin-top:14px">
+    <div class="card"><h3>Productor</h3><ul class="limpia"><li><code>acks=all</code>, <code>enable.idempotence=true</code></li><li>Clave = <code>numeroGuia</code> (orden por guía)</li><li><code>send().get(timeout)</code>: el 202 espera la confirmación</li></ul></div>
+    <div class="card"><h3>Relay del outbox</h3><ul class="limpia"><li><code>@Scheduled</code> + <code>pg_try_advisory_xact_lock</code>: un solo líder</li><li>Publica en orden de <code>version</code> y marca en la misma tx</li><li>Restaura el contexto de traza guardado en la fila</li></ul></div>
+    <div class="card"><h3>Observabilidad</h3><ul class="limpia"><li>Agente OpenTelemetry: HTTP, JDBC y Kafka sin código</li><li>Métricas <code>tcc_*</code> con Micrometer (mismos nombres)</li><li>Logs JSON con <code>trace_id</code> hacia Loki</li></ul></div>
+  </div>
+</section>
+
+<!-- ============ PRUEBAS ============ -->
+<section id="pruebas">
+  <h2><span class="num">05</span>Qué probaría y cómo</h2>
+  <p class="sub">La pirámide de la versión .NET se porta tal cual. Las pruebas se escriben primero en Java y funcionan como la especificación de la migración.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <table>
+        <tr><th>Nivel</th><th>Herramienta</th><th>Qué garantiza</th><th>.NET</th></tr>
+        <tr><td>Dominio</td><td>JUnit 5 + AssertJ</td><td>Máquina de estados, tardíos, reglas de notificación</td><td>28</td></tr>
+        <tr><td>Aplicación</td><td>JUnit + falsos a mano</td><td>Casos de uso y decoradores (contingencia, tolerancia)</td><td>23</td></tr>
+        <tr><td>API</td><td><code>@WebMvcTest</code> / MockMvc</td><td>202/200/400/401/403/413/429/503, contrato OpenAPI</td><td>51</td></tr>
+        <tr><td>Procesador</td><td>Testcontainers</td><td>Concurrencia real, outbox, relay, DLQ, orden por partición</td><td>29</td></tr>
+        <tr><td>Notificador</td><td>JUnit + falsos</td><td>Escalera de reintentos, canal alterno, idempotencia</td><td>12</td></tr>
+        <tr><td>Arquitectura</td><td>Maven + ArchUnit</td><td>Capas, sin Spring en el núcleo, dominio sin setters</td><td>8</td></tr>
+        <tr><td>Carga y caos</td><td>k6 + reconciliación</td><td>Cero pérdida bajo carga y con <code>kill</code></td><td>mismos scripts</td></tr>
+      </table>
+      <h3 style="margin-top:14px">Las imprescindibles</h3>
+      <ul class="limpia">
+        <li><b>50 procesamientos concurrentes del mismo evento → 1 fila</b> (PostgreSQL real)</li>
+        <li>Conflicto de versión entre escrituras → rollback completo</li>
+        <li>Kafka caído → contingencia; Kafka y base caídos → 503</li>
+        <li>Poison pill → DLQ sin congelar la partición</li>
+        <li>Dos relays a la vez → sin duplicados ni desorden</li>
+      </ul>
+    </div>
+    <div class="card">
+      <p class="rotulo">Prueba unitaria con falso escrito a mano</p>
+<pre class="codigo"><span class="a">@Test</span>
+<span class="k">void</span> kafka_caido_guarda_en_contingencia_y_no_falla() {
+  <span class="k">var</span> kafka = <span class="k">new</span> PublicadorQueFalla();
+  <span class="k">var</span> contingencia = <span class="k">new</span> AlmacenEnMemoria();
+  <span class="k">var</span> publicador = <span class="k">new</span> PublicadorConContingencia(kafka, contingencia);
+
+  publicador.publicar(unEvento());
+
+  assertThat(contingencia.guardados()).hasSize(<span class="s">1</span>);
+}</pre>
+      <p class="rotulo" style="margin-top:12px">Integración con PostgreSQL real</p>
+<pre class="codigo"><span class="a">@Test</span>
+<span class="k">void</span> cincuenta_procesamientos_concurrentes_producen_un_solo_efecto()
+    <span class="k">throws</span> Exception {
+  <span class="k">var</span> evento = unEvento();
+  <span class="k">try</span> (<span class="k">var</span> hilos = Executors.newVirtualThreadPerTaskExecutor()) {
+    <span class="k">var</span> tareas = IntStream.range(<span class="s">0</span>, <span class="s">50</span>)
+        .mapToObj(i -&gt; hilos.submit(() -&gt; intentar(evento))).toList();
+    <span class="k">for</span> (<span class="k">var</span> t : tareas) t.get();
+  }
+  assertThat(contarFilas(<span class="s">"historial_eventos"</span>, evento.idEvento())).isEqualTo(<span class="s">1</span>);
+}</pre>
+      <p class="rotulo" style="margin-top:12px">Arquitectura con ArchUnit</p>
+<pre class="codigo"><span class="a">@ArchTest</span>
+<span class="k">static final</span> ArchRule nucleo_sin_spring = noClasses()
+    .that().resideInAnyPackage(<span class="s">"..dominio.."</span>, <span class="s">"..aplicacion.."</span>)
+    .should().dependOnClassesThat().resideInAnyPackage(<span class="s">"org.springframework.."</span>);</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CALIDAD ============ -->
+<section id="calidad">
+  <h2><span class="num">06</span>Cómo aseguro la calidad</h2>
+  <p class="sub">La calidad no depende de la memoria ni de la buena voluntad: está en compuertas automáticas que nadie puede saltarse, más una revisión humana que se enfoca en lo que las máquinas no ven.</p>
+
+  <div class="grid g4">
+    <div class="card"><h3 class="az">1 · En la máquina</h3><ul class="limpia"><li><code>javac -Werror</code> + Error Prone</li><li>Formato con Spotless</li><li><code>mvn verify</code> antes del push</li></ul></div>
+    <div class="card"><h3 class="ok">2 · En el PR</h3><ul class="limpia"><li>Todas las pruebas + Testcontainers</li><li>ArchUnit y contrato OpenAPI</li><li>JaCoCo: cobertura de líneas nuevas</li><li>Sonar: sin nuevos problemas</li></ul></div>
+    <div class="card"><h3 class="mo">3 · Seguridad</h3><ul class="limpia"><li>Dependencias vulnerables (OWASP / Trivy)</li><li>Secretos en el código (Trivy)</li><li>Imagen distroless escaneada</li></ul></div>
+    <div class="card"><h3 class="na">4 · Sistema completo</h3><ul class="limpia"><li>Prueba de humo con las imágenes reales</li><li>Staging + aprobación</li><li>Canary 10 % → 100 %</li></ul></div>
+  </div>
+
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card">
+      <h3>Definición de terminado</h3>
+      <ul class="limpia">
+        <li>Toda corrección de bug trae la prueba que lo reproduce</li>
+        <li>Cambio de esquema = nueva migración expand/contract; nunca editar una aplicada</li>
+        <li>Contrato V1 solo con cambios compatibles; si no, V2 conviviendo</li>
+        <li>Decisión relevante = ADR en el mismo PR</li>
+        <li>Métricas y logs para lo nuevo (si no se ve, no está terminado)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Qué mira la revisión humana</h3>
+      <ul class="limpia">
+        <li><b>Garantías:</b> ¿hay algún camino que responda 202 sin durabilidad? ¿el offset se confirma antes de tiempo?</li>
+        <li><b>Concurrencia:</b> ¿comprobar-y-actuar sin llave única? ¿estado compartido entre hilos?</li>
+        <li><b>Fallas:</b> ¿excepciones tragadas? ¿reintentos sin límite donde no deben?</li>
+        <li><b>Seguridad y datos:</b> ¿datos personales en logs o en el evento?</li>
+        <li><b>Diseño:</b> ¿cabe en la hexagonal? ¿nombre claro? ¿una sola responsabilidad?</li>
+      </ul>
+    </div>
+  </div>
+  <p class="nota">SOLID aplicado: responsabilidad única (un caso de uso por clase), abierto/cerrado (decoradores), sustitución (cualquier adaptador cumple el puerto), segregación (puertos pequeños y específicos), inversión de dependencias (la aplicación define las interfaces que la infraestructura implementa).</p>
+</section>
+
+<!-- ============ IA ============ -->
+<section id="ia">
+  <h2><span class="num">07</span>IA y agentes en la construcción</h2>
+  <p class="sub">La versión .NET se construyó con un agente de código, paso a paso. La lección: <b>el agente acelera, pero la verificación sigue siendo obligatoria</b>.</p>
+
+  <div class="grid g3">
+    <div class="card">
+      <h3 class="az">Cómo lo uso</h3>
+      <ul class="limpia">
+        <li>Andamiaje y código repetitivo (adaptadores, mapeos, configuración)</li>
+        <li>Pruebas: casos límite que a una persona se le pasan</li>
+        <li><b>Migración .NET → Java</b>: las pruebas portadas son la especificación y el agente implementa hasta que pasan</li>
+        <li>Revisión de PR como segunda mirada, no como aprobador</li>
+        <li>Documentación y ADR a partir del código real</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 class="ok">Cómo lo verifico</h3>
+      <ul class="limpia">
+        <li>Reglas escritas para el agente (<code>AGENTS.md</code>): capas, nombres, contratos, secretos</li>
+        <li>Pasos pequeños: un cambio, una prueba, un commit</li>
+        <li><b>Mismas compuertas</b> que el código humano: pruebas, ArchUnit, contrato, seguridad</li>
+        <li>Verificación contra el sistema real (Docker, carga, caos), no solo en memoria</li>
+        <li>Quien abre el PR responde por el código y debe poder explicarlo</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 class="bad">Lo que la verificación atrapó</h3>
+      <ul class="limpia">
+        <li>El límite de tamaño del cuerpo se ignoraba en un caso</li>
+        <li><code>localhost</code> resolvía a IPv6 y los servicios no se veían</li>
+        <li>Fechas no UTC: 28 eventos válidos a la DLQ (recuperados con replay)</li>
+        <li>El procesador era el cuello de botella (90 → 343 ev/s tras corregirlo)</li>
+        <li>Tokens JWT colados en los resultados de k6 antes de publicarlos</li>
+      </ul>
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card">
+      <h3>Reglas del equipo</h3>
+      <ul class="limpia">
+        <li>Nada de secretos ni datos reales en los prompts</li>
+        <li>Se miden resultados (lead time, fallas en producción), no líneas generadas</li>
+        <li>Riesgo principal: aceptar código que no se entiende → pairing y revisiones que piden explicar el porqué</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>IA en la operación (fuera del camino crítico)</h3>
+      <ul class="limpia">
+        <li>Agente de novedades: consume con su propio grupo y actúa <b>por la misma API</b>, con su cliente OAuth2</li>
+        <li>Autonomía según el riesgo: reprogramar = automático; devolver = aprueba una persona</li>
+        <li>Si el agente falla, la ingesta, el estado y las notificaciones siguen</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EJERCICIO ============ -->
+<section id="ejercicio">
+  <h2><span class="num">08</span>Preparación para el ejercicio de código</h2>
+  <p class="sub">Un ejemplo de revisión de un fragmento con errores típicos del dominio y la versión corregida. El método es el mismo para cualquier fragmento: <b>leer, preguntar, probar, cambiar</b>.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <p class="rotulo" style="color:var(--rojo)">Fragmento a revisar</p>
+<pre class="codigo malo"><span class="a">@KafkaListener</span>(topics = <span class="s">"guias.eventos.recibidos"</span>)
+<span class="k">public void</span> procesar(String json, Acknowledgment ack) {
+  ack.acknowledge();                                        <span class="c">// 1</span>
+  <span class="k">try</span> {
+    EventoGuia e = mapper.readValue(json, EventoGuia.<span class="k">class</span>);
+    log.info(<span class="s">"Evento {} tel {}"</span>, e, cliente.telefono()); <span class="c">// 2</span>
+    <span class="k">if</span> (!repo.existeEvento(e.idEvento())) {              <span class="c">// 3</span>
+      Guia g = repo.obtener(e.numeroGuia());
+      g.setEstado(e.estado());                             <span class="c">// 4</span>
+      repo.guardar(g);
+      kafka.send(<span class="s">"guias.estados.cambiados"</span>, g);         <span class="c">// 5</span>
+      repo.guardarHistorial(e);
+    }
+  } <span class="k">catch</span> (Exception ex) {                                 <span class="c">// 6</span>
+    ex.printStackTrace();
+  }
+}</pre>
+    </div>
+    <div class="card">
+      <h3>Hallazgos</h3>
+      <div class="hallazgo"><span class="n">1</span><span><b>Offset antes de procesar:</b> si el proceso muere, el evento se pierde. Confirmar después del commit en la base.</span></div>
+      <div class="hallazgo"><span class="n">2</span><span><b>Dato personal en logs</b> (Ley 1581). El evento no debe traer teléfono y los logs se enmascaran.</span></div>
+      <div class="hallazgo"><span class="n">3</span><span><b>Comprobar y luego actuar:</b> dos hilos pasan el <code>if</code> a la vez. La garantía es la llave primaria del inbox (<code>ON CONFLICT</code>) dentro de la transacción.</span></div>
+      <div class="hallazgo"><span class="n">4</span><span><b>Setter que salta la máquina de estados:</b> no valida transición ni tardíos, y no controla la versión. Debe ser <code>guia.aplicar(evento)</code>. Además <code>g</code> puede ser <code>null</code> (primera vez).</span></div>
+      <div class="hallazgo"><span class="n">5</span><span><b>Doble escritura:</b> publica en Kafka fuera de la transacción y antes del historial. Si falla entre medias, hay anuncio sin estado o estado sin anuncio. Solución: outbox en la misma transacción.</span></div>
+      <div class="hallazgo"><span class="n">6</span><span><b>Excepción tragada:</b> un error transitorio (base caída) se pierde en silencio. Los transitorios se reintentan; los ilegibles van a la DLQ.</span></div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card">
+      <p class="rotulo" style="color:var(--verde)">Versión corregida</p>
+<pre class="codigo bueno"><span class="a">@KafkaListener</span>(topics = <span class="s">"guias.eventos.recibidos"</span>, groupId = <span class="s">"procesador-estado"</span>)
+<span class="k">void</span> procesar(ConsumerRecord&lt;String, String&gt; registro, Acknowledgment ack) {
+  EventoGuia evento = lector.leer(registro);   <span class="c">// ilegible ⇒ DLQ</span>
+  procesarEvento.ejecutar(evento);             <span class="c">// inbox+estado+outbox, 1 tx</span>
+  ack.acknowledge();                           <span class="c">// solo tras el commit</span>
+}                                              <span class="c">// transitorios: se reintenta</span></pre>
+      <p class="nota">La lógica sale del listener: el caso de uso decide con la máquina de estados y el repositorio garantiza "todo o nada". El listener queda en cuatro líneas y se prueba por separado.</p>
+    </div>
+    <div class="card">
+      <h3>Si el ejercicio es programar</h3>
+      <ol class="pasos">
+        <li><b>Preguntar antes de escribir:</b> ¿puede llegar repetido? ¿desordenado? ¿qué pasa si falla a la mitad?</li>
+        <li><b>Empezar por la prueba</b> del caso feliz y de un caso límite (duplicado, tardío, transición inválida).</li>
+        <li><b>Dominio primero,</b> sin frameworks: una clase con reglas y resultados explícitos.</li>
+        <li><b>Nombrar las garantías</b> en voz alta: idempotencia, atomicidad, orden.</li>
+        <li><b>Cerrar con lo que falta:</b> qué probaría después y qué cambiaría con más tiempo.</li>
+      </ol>
+      <p class="nota">Ejercicio probable: implementar <code>MaquinaEstados.puedeTransitar</code> o <code>Guia.aplicar</code> con sus pruebas, o revisar un consumidor o un endpoint como el de arriba.</p>
+    </div>
+  </div>
+</section>
+
+<div class="pie">Repositorio: github.com/yeissonvj/prueba-tcc-envio (rama develop) · implementación de referencia en .NET 10 · diseño Java/Spring</div>
+</main>
+
+<script>
+  const secciones = [...document.querySelectorAll('section')];
+  const enlaces = [...document.querySelectorAll('nav a')];
+  function actual() { const y = window.scrollY + 90; let i = 0; secciones.forEach((s, k) => { if (s.offsetTop <= y) i = k; }); return i; }
+  function marcar() { const id = secciones[actual()].id; enlaces.forEach(a => a.classList.toggle('activo', a.getAttribute('href') === '#' + id)); }
+  document.addEventListener('keydown', e => {
+    const sig = ['ArrowRight', 'PageDown'].includes(e.key), ant = ['ArrowLeft', 'PageUp'].includes(e.key);
+    if (!sig && !ant) return;
+    e.preventDefault();
+    secciones[Math.min(secciones.length - 1, Math.max(0, actual() + (sig ? 1 : -1)))].scrollIntoView({ behavior: 'smooth' });
+  });
+  window.addEventListener('scroll', marcar, { passive: true }); marcar();
+</script>
+</body>
+</html>
