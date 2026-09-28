@@ -1,0 +1,3 @@
+corrida=AIVENOBS
+aceptados=2401
+no_aceptados=0

@@ -1,0 +1,166 @@
+# Demo con Kafka y PostgreSQL administrados en Aiven (plan gratuito). El resto corre local.
+# Pasos completos en docs/demo-aiven.md. Requiere infra/aiven/.env y los certificados en infra/aiven/certificados/.
+#   docker compose -f infra/aiven/docker-compose.yml up -d --build
+name: tcc-eventos-aiven
+
+x-app-comun: &app-comun
+  restart: unless-stopped
+  volumes:
+    - ./certificados:/certificados:ro
+  environment: &app-entorno
+    Kafka__Servidores: ${AIVEN_KAFKA_SERVIDORES:?Falta AIVEN_KAFKA_SERVIDORES en infra/aiven/.env}
+    Kafka__ProtocoloSeguridad: ${AIVEN_KAFKA_PROTOCOLO:-SSL}
+    Kafka__CertificadoCa: /certificados/ca.pem
+    Kafka__CertificadoCliente: ${AIVEN_KAFKA_CERTIFICADO_CLIENTE-/certificados/service.cert}
+    Kafka__LlaveCliente: ${AIVEN_KAFKA_LLAVE_CLIENTE-/certificados/service.key}
+    Kafka__MecanismoSasl: ${AIVEN_KAFKA_MECANISMO:-}
+    Kafka__UsuarioSasl: ${AIVEN_KAFKA_USUARIO:-}
+    Kafka__ContrasenaSasl: ${AIVEN_KAFKA_CONTRASENA:-}
+    # Plan gratuito: la sonda considera el broker disponible con 1 réplica sincronizada.
+    Kafka__ReplicasMinimasSincronizadas: ${AIVEN_KAFKA_MIN_ISR:-1}
+    # Máximo 20 conexiones en PostgreSQL gratuito: 5 por servicio.
+    Postgres__Conexion: Host=${AIVEN_PG_HOST:?Falta AIVEN_PG_HOST};Port=${AIVEN_PG_PUERTO:?Falta AIVEN_PG_PUERTO};Database=${AIVEN_PG_BASE:-defaultdb};Username=${AIVEN_PG_USUARIO:-avnadmin};SSL Mode=VerifyFull;Root Certificate=/certificados/ca.pem;GSS Encryption Mode=Disable;Maximum Pool Size=5;Timeout=15;Command Timeout=15
+    Postgres__Contrasena: ${AIVEN_PG_CONTRASENA:?Falta AIVEN_PG_CONTRASENA}
+    Observabilidad__OtlpEndpoint: http://otel-collector:4317
+
+services:
+  migraciones:
+    image: flyway/flyway:11-alpine
+    volumes:
+      - ../../db/migraciones:/flyway/sql:ro
+    environment:
+      FLYWAY_URL: jdbc:postgresql://${AIVEN_PG_HOST}:${AIVEN_PG_PUERTO}/${AIVEN_PG_BASE:-defaultdb}?sslmode=require
+      FLYWAY_USER: ${AIVEN_PG_USUARIO:-avnadmin}
+      FLYWAY_PASSWORD: ${AIVEN_PG_CONTRASENA}
+    command: ["migrate"]
+    restart: "no"
+
+  redis:
+    image: redis:7-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-tcc_local}
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\""]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping"]
+      interval: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    command: ["start-dev", "--import-realm", "--http-port=8081"]
+    ports: ["127.0.0.1:8081:8081"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin_local}
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    volumes:
+      - ../keycloak/tcc-realm.json:/opt/keycloak/data/import/tcc-realm.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+
+  # ---------- Observabilidad: misma configuración que el entorno local (infra/observabilidad) ----------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.161.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ../observabilidad/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    depends_on: [jaeger, loki]
+
+  jaeger:
+    image: jaegertracing/jaeger:2.21.0
+    ports: ["127.0.0.1:16686:16686"]
+
+  loki:
+    image: grafana/loki:3.7.8
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ../observabilidad/loki.yaml:/etc/loki/loki.yaml:ro
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    ports: ["127.0.0.1:9090:9090"]
+    volumes:
+      - ../observabilidad/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../observabilidad/alertas.yml:/etc/prometheus/alertas.yml:ro
+
+  grafana:
+    image: grafana/grafana:13.2.2
+    ports: ["127.0.0.1:3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin_local}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/tableros/plataforma-eventos.json
+    volumes:
+      - ../observabilidad/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../observabilidad/grafana/tableros:/var/lib/grafana/tableros:ro
+    depends_on: [prometheus, loki]
+
+  api:
+    <<: *app-comun
+    build: { context: ../../dotnet, args: { PROYECTO: TccEventos.Api, BASE: aspnet } }
+    image: tcc-api:local
+    ports: ["127.0.0.1:8091:8080"]
+    environment:
+      <<: *app-entorno
+      Redis__Conexion: redis:6379,abortConnect=false,connectTimeout=2000,asyncTimeout=250
+      Redis__Contrasena: ${REDIS_PASSWORD:-tcc_local}
+      Seguridad__Emisor: http://localhost:8081/realms/tcc
+      Seguridad__DireccionInterna: http://keycloak:8081/realms/tcc
+      Seguridad__RequiereHttps: "false"
+      # Kafka en la nube: más margen de entrega que en local.
+      Kafka__TiempoMaximoEntregaMs: "15000"
+    depends_on:
+      migraciones: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+
+  procesador:
+    <<: *app-comun
+    build: { context: ../../dotnet, args: { PROYECTO: TccEventos.Procesador, BASE: runtime } }
+    image: tcc-procesador:local
+    depends_on:
+      migraciones: { condition: service_completed_successfully }
+
+  notificador:
+    <<: *app-comun
+    build: { context: ../../dotnet, args: { PROYECTO: TccEventos.Notificador, BASE: runtime } }
+    image: tcc-notificador:local
+    environment:
+      <<: *app-entorno
+      # Plan gratuito = 5 tópicos: una sola etapa de reintento (1 min) antes del canal alterno y la DLQ.
+      Notificador__EtapasActivas: "1"
+      # Simulación desde el panel de pruebas (herramientas/panel-pruebas); por defecto, comportamiento normal.
+      Proveedores__Sms__Caido: ${SIMULAR_SMS_CAIDO:-false}
+      Notificador__Reintentos__0__Espera: ${ESPERA_REINTENTO_1:-00:01:00}
+      Notificador__Reintentos__1__Espera: ${ESPERA_REINTENTO_2:-00:10:00}
+      Notificador__Reintentos__2__Espera: ${ESPERA_REINTENTO_3:-01:00:00}
+    depends_on:
+      migraciones: { condition: service_completed_successfully }
+
+  # ---------- Acceso público temporal (perfil "publico"): solo se levanta si se pide ----------
+  #   docker compose -f infra/aiven/docker-compose.yml --profile publico up -d
+  # Requiere NGROK_AUTHTOKEN en infra/aiven/.env. La URL pública aparece en http://127.0.0.1:4040.
+  proxy-publico:
+    image: nginx:alpine
+    profiles: ["publico"]
+    restart: unless-stopped
+    volumes:
+      - ./publico/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on: [api, keycloak]
+
+  ngrok:
+    image: ngrok/ngrok:3
+    profiles: ["publico"]
+    restart: unless-stopped
+    command: ["http", "proxy-publico:80", "--log", "stdout"]
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    ports: ["127.0.0.1:4040:4040"]
+    depends_on: [proxy-publico]

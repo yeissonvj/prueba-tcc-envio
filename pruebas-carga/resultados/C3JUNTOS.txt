@@ -1,0 +1,3 @@
+corrida=C3JUNTOS
+aceptados=5709
+no_aceptados=0

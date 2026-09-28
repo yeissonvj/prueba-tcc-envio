@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eje 2 · Vista general</title>
+<script src="acceso.js"></script>
+<script src="sesion.js"></script>
+<script>TCC.exigir()</script>
+<script src="reloj.js"></script>
+<style>
+  :root {
+    --fondo: #0b1016; --panel: #121a23; --panel2: #17212c; --borde: #243242; --texto: #dbe4ee; --tenue: #8a9bb0;
+    --azul: #4ea1ff; --naranja: #ff9f43; --verde: #3ddc97; --morado: #b388ff; --rojo: #ff6b6b; --gris: #6b7b8f; --amarillo: #ffd166;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 60px; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 17px/1.55 system-ui, "Segoe UI", Roboto, sans-serif; }
+  nav { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 4px; padding: 10px 20px;
+        background: rgba(11,16,22,.92); backdrop-filter: blur(6px); border-bottom: 1px solid var(--borde); overflow-x: auto; }
+  nav .marca { font-weight: 700; margin-right: 10px; white-space: nowrap; font-size: 15px; }
+  nav a { color: var(--tenue); text-decoration: none; padding: 5px 10px; border-radius: 6px; white-space: nowrap; font-size: 13px; }
+  nav a:hover, nav a.activo { color: var(--texto); background: var(--panel2); }
+  nav a.salto { color: var(--azul); border: 1px solid var(--borde); }
+  nav a.tec { margin-left: auto; }
+  main { max-width: 1180px; margin: 0 auto; padding: 0 20px 60px; }
+  section { padding: 40px 0 34px; border-bottom: 1px solid var(--borde); min-height: 88vh; display: flex; flex-direction: column; justify-content: center; }
+  h1 { font-size: 36px; margin: 0 0 8px; line-height: 1.2; }
+  h2 { font-size: 28px; margin: 0 0 6px; display: flex; align-items: baseline; gap: 14px; }
+  h2 .num { font-family: var(--mono); color: var(--azul); font-size: 16px; }
+  .lead { color: var(--tenue); font-size: 18px; margin: 0 0 20px; max-width: 920px; }
+  .lead b { color: var(--texto); }
+  .aviso { display: inline-block; border: 1px solid #6b541f; background: #2b2710; color: var(--amarillo); border-radius: 8px; padding: 6px 12px; font-size: 14px; margin: 0 0 18px; }
+  .diagrama { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 14px; }
+  .pie-slide { display: flex; align-items: center; gap: 18px; margin-top: 18px; flex-wrap: wrap; }
+  .clave { flex: 1; min-width: 280px; border-left: 4px solid var(--verde); background: var(--panel); padding: 12px 16px; border-radius: 0 10px 10px 0; }
+  .clave b { color: var(--verde); }
+  .mas { color: var(--azul); text-decoration: none; border: 1px solid #1d4a7a; background: #0f2236; padding: 10px 16px; border-radius: 8px; white-space: nowrap; font-size: 15px; }
+  .mas:hover { background: #143152; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 18px; }
+  .kpi { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 16px; }
+  .kpi .v { font-size: 34px; font-weight: 800; font-family: var(--mono); line-height: 1.1; }
+  .kpi .l { color: var(--tenue); font-size: 14px; margin-top: 6px; }
+  .ok { color: var(--verde); } .az { color: var(--azul); } .na { color: var(--naranja); } .mo { color: var(--morado); } .am { color: var(--amarillo); } .ro { color: var(--rojo); }
+  .chip { display: inline-block; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--borde); background: var(--panel2); margin: 4px 6px 4px 0; font-size: 14.5px; }
+  .chip.v { border-color: #1f6b4f; color: var(--verde); } .chip.r { border-color: #6b2a2a; color: var(--rojo); }
+  .pie { color: var(--gris); font-size: 13px; padding: 24px 0; text-align: center; }
+  svg text { font-family: system-ui, "Segoe UI", Roboto, sans-serif; }
+  .b-app{fill:#10243a;stroke:#4ea1ff;stroke-width:1.6} .b-kfk{fill:#33230f;stroke:#ff9f43;stroke-width:1.6} .b-db{fill:#0f2c22;stroke:#3ddc97;stroke-width:1.6}
+  .b-sec{fill:#241b38;stroke:#b388ff;stroke-width:1.6} .b-ext{fill:#161e27;stroke:#6b7b8f;stroke-width:1.6} .b-dlq{fill:#341616;stroke:#ff6b6b;stroke-width:1.6}
+  .b-am{fill:#2b2710;stroke:#ffd166;stroke-width:1.6} .b-plan{fill:#0f2c22;stroke:#3ddc97;stroke-width:1.6;stroke-dasharray:7 5}
+  .T{fill:#dbe4ee;font-size:17px;font-weight:700} .S{fill:#8a9bb0;font-size:13.5px} .E{fill:#8a9bb0;font-size:12.5px} .W{fill:#dbe4ee;font-size:14px}
+  .Tv{fill:#3ddc97;font-size:15px;font-weight:700} .Tr{fill:#ff6b6b;font-size:15px;font-weight:700} .Ta{fill:#ffd166;font-size:15px;font-weight:700} .Tz{fill:#4ea1ff;font-size:15px;font-weight:700} .Tm{fill:#b388ff;font-size:15px;font-weight:700} .To{fill:#ff9f43;font-size:15px;font-weight:700}
+  .M{font-family:ui-monospace,Consolas,monospace !important;font-size:13px;fill:#dbe4ee}
+  .ln{stroke:#8a9bb0;stroke-width:2;fill:none} .ln.d{stroke-dasharray:6 5} .ln.v{stroke:#3ddc97} .ln.r{stroke:#ff6b6b}
+  @media (max-width: 800px) { .kpis { grid-template-columns: repeat(2, 1fr); } section { min-height: 0; } }
+  @media print { nav { display: none; } section { min-height: 0; page-break-after: always; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="f"  viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a9bb0"/></marker>
+    <marker id="fv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3ddc97"/></marker>
+    <marker id="fr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ff6b6b"/></marker>
+  </defs>
+</svg>
+
+<nav id="nav">
+  <span class="marca">TCC · Eje 2</span>
+  <a class="salto" href="index.html">⌂ Inicio</a>
+  <a href="#reto">Eje 2</a>
+  <a href="#estructura">Estructura</a>
+  <a href="#equivalencias">.NET → Java</a>
+  <a href="#peticion">Una petición</a>
+  <a href="#pruebas">Pruebas</a>
+  <a href="#calidad">Calidad</a>
+  <a href="#ia">IA</a>
+  <a href="#ejercicio">Ejercicio</a>
+  <a class="salto tec" href="eje2-tecnica.html">Versión técnica →</a>
+</nav>
+
+<main>
+
+<!-- ============ 0 · EJE 2 ============ -->
+<section id="reto">
+  <h1>Eje 2 · Desarrollo y calidad</h1>
+  <p class="lead">Bajamos de la arquitectura al código: cómo se <b>organiza</b> el servicio en Java/Spring, qué se <b>prueba</b>, cómo se <b>asegura la calidad</b> y cómo se usa y se <b>verifica la IA</b> al construirlo.</p>
+  <div><span class="aviso">Diseño propuesto para Java · la referencia construida y verificada está en .NET 10</span></div>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 300" width="100%" role="img" aria-label="Los cuatro temas del eje 2">
+    <rect x="380" y="110" width="240" height="80" rx="14" class="b-app"/>
+    <text x="500" y="145" text-anchor="middle" class="T">Servicio Java / Spring</text>
+    <text x="500" y="168" text-anchor="middle" class="S">mismos contratos, tópicos y base</text>
+
+    <path d="M300,70 L378,125" class="ln"/><path d="M700,70 L622,125" class="ln"/>
+    <path d="M300,230 L378,175" class="ln"/><path d="M700,230 L622,175" class="ln"/>
+
+    <rect x="40" y="30" width="260" height="80" rx="10" class="b-app"/><text x="170" y="62" text-anchor="middle" class="Tz">1 · Estructura</text><text x="170" y="86" text-anchor="middle" class="S">hexagonal con módulos Maven</text>
+    <rect x="700" y="30" width="260" height="80" rx="10" class="b-db"/><text x="830" y="62" text-anchor="middle" class="Tv">2 · Pruebas</text><text x="830" y="86" text-anchor="middle" class="S">pirámide con Kafka y base reales</text>
+    <rect x="40" y="190" width="260" height="80" rx="10" class="b-am"/><text x="170" y="222" text-anchor="middle" class="Ta">3 · Calidad</text><text x="170" y="246" text-anchor="middle" class="S">compuertas que nadie se salta</text>
+    <rect x="700" y="190" width="260" height="80" rx="10" class="b-sec"/><text x="830" y="222" text-anchor="middle" class="Tm">4 · IA y agentes</text><text x="830" y="246" text-anchor="middle" class="S">acelera, pero se verifica</text>
+  </svg>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="v az">7</div><div class="l">módulos, uno por cada proyecto de la versión .NET</div></div>
+    <div class="kpi"><div class="v ok">151</div><div class="l">pruebas .NET que se portan primero y guían la migración</div></div>
+    <div class="kpi"><div class="v am">0</div><div class="l">librerías que existan solo en .NET: cada pieza tiene su par</div></div>
+    <div class="kpi"><div class="v ro">6</div><div class="l">trampas típicas que busco al revisar código de eventos</div></div>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> la versión Java no es un rediseño; es una traducción de algo que ya se probó.</div>
+    <a class="mas" href="eje2-tecnica.html#inicio">Ver resumen técnico →</a>
+  </div>
+</section>
+
+<!-- ============ 1 · ESTRUCTURA ============ -->
+<section id="estructura">
+  <h2><span class="num">01</span>Cómo se organiza el servicio</h2>
+  <p class="lead">Siete módulos Maven, en capas. Spring vive <b>solo en los bordes</b>; el centro es Java puro. Y la regla no depende de la disciplina: si el módulo del dominio no tiene Spring, <b>no compila</b> si alguien intenta usarlo.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 395" width="100%" role="img" aria-label="Módulos del servicio Java">
+    <rect x="20" y="12" width="960" height="195" rx="12" fill="#0e1824" stroke="#4ea1ff" stroke-dasharray="7 5"/>
+    <text x="36" y="33" class="Tz" style="font-size:13.5px">SPRING BOOT · solo en los bordes</text>
+    <rect x="20" y="215" width="960" height="172" rx="12" fill="#0e1f18" stroke="#3ddc97" stroke-dasharray="7 5"/>
+    <text x="36" y="236" class="Tv" style="font-size:13.5px">JAVA PURO · se prueba sin levantar Spring</text>
+
+    <rect x="60"  y="45" width="240" height="56" rx="9" class="b-app"/><text x="180" y="69" text-anchor="middle" class="T" style="font-size:15px">tcc-api</text><text x="180" y="89" text-anchor="middle" class="E">Web MVC · Security</text>
+    <rect x="380" y="45" width="240" height="56" rx="9" class="b-app"/><text x="500" y="69" text-anchor="middle" class="T" style="font-size:15px">tcc-procesador</text><text x="500" y="89" text-anchor="middle" class="E">Spring Kafka</text>
+    <rect x="700" y="45" width="240" height="56" rx="9" class="b-app"/><text x="820" y="69" text-anchor="middle" class="T" style="font-size:15px">tcc-notificador</text><text x="820" y="89" text-anchor="middle" class="E">Spring Kafka</text>
+
+    <path d="M180,101 L318,137" class="ln" marker-end="url(#f)"/>
+    <path d="M500,101 L440,137" class="ln" marker-end="url(#f)"/>
+    <path d="M820,101 L562,137" class="ln" marker-end="url(#f)"/>
+
+    <rect x="200" y="140" width="400" height="56" rx="9" class="b-kfk"/><text x="400" y="164" text-anchor="middle" class="T" style="font-size:15px">tcc-infraestructura</text><text x="400" y="184" text-anchor="middle" class="E">Kafka · JDBC · Redis · Resilience4j (adaptadores)</text>
+    <path d="M600,168 H678" class="ln" marker-end="url(#f)"/>
+    <rect x="680" y="140" width="220" height="56" rx="9" class="b-ext"/><text x="790" y="164" text-anchor="middle" class="T" style="font-size:15px">tcc-contratos</text><text x="790" y="184" text-anchor="middle" class="E">records V1 · Java puro, sin Spring</text>
+
+    <path d="M400,196 V248" class="ln" marker-end="url(#f)"/>
+    <rect x="250" y="250" width="300" height="56" rx="9" class="b-app"/><text x="400" y="274" text-anchor="middle" class="T" style="font-size:15px">tcc-aplicacion</text><text x="400" y="294" text-anchor="middle" class="E">casos de uso · puertos · decoradores</text>
+    <path d="M400,306 V326" class="ln" marker-end="url(#f)"/>
+    <rect x="280" y="328" width="240" height="50" rx="9" class="b-db"/><text x="400" y="351" text-anchor="middle" class="Tv">tcc-dominio</text><text x="400" y="369" text-anchor="middle" class="E">Guia · MaquinaEstados</text>
+
+    <text x="640" y="280" class="W">Las flechas del pom.xml son</text>
+    <text x="640" y="300" class="W">la arquitectura: siempre</text>
+    <text x="640" y="320" class="W">apuntan hacia el centro.</text>
+    <text x="640" y="350" class="E">ArchUnit vigila lo que el compilador no ve.</text>
+  </svg>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> las reglas del negocio se prueban en milisegundos, sin Kafka, sin base de datos y sin Spring.</div>
+    <a class="mas" href="eje2-tecnica.html#estructura">Ver árbol y reglas de diseño →</a>
+  </div>
+</section>
+
+<!-- ============ 2 · EQUIVALENCIAS ============ -->
+<section id="equivalencias">
+  <h2><span class="num">02</span>De .NET a Java, pieza por pieza</h2>
+  <p class="lead">Desde el principio se eligieron piezas que existen en los dos mundos. Por eso cada herramienta de .NET tiene <b>su par directo</b> en Java.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 360" width="100%" role="img" aria-label="Equivalencias .NET a Java">
+    <text x="115" y="22" text-anchor="middle" class="E">.NET · construido</text><text x="355" y="22" text-anchor="middle" class="E">JAVA · diseño</text>
+    <text x="605" y="22" text-anchor="middle" class="E">.NET · construido</text><text x="845" y="22" text-anchor="middle" class="E">JAVA · diseño</text>
+    <g>
+      <rect x="30" y="36" width="170" height="50" rx="25" class="b-ext"/><text x="115" y="66" text-anchor="middle" class="W">Minimal APIs</text>
+      <path d="M200,61 H246" class="ln v" marker-end="url(#fv)"/>
+      <rect x="250" y="36" width="210" height="50" rx="25" class="b-db"/><text x="355" y="66" text-anchor="middle" class="W">Spring Web MVC</text>
+
+      <rect x="30" y="111" width="170" height="50" rx="25" class="b-ext"/><text x="115" y="141" text-anchor="middle" class="W">Polly</text>
+      <path d="M200,136 H246" class="ln v" marker-end="url(#fv)"/>
+      <rect x="250" y="111" width="210" height="50" rx="25" class="b-db"/><text x="355" y="141" text-anchor="middle" class="W">Resilience4j</text>
+
+      <rect x="30" y="186" width="170" height="50" rx="25" class="b-ext"/><text x="115" y="216" text-anchor="middle" class="W">Confluent.Kafka</text>
+      <path d="M200,211 H246" class="ln v" marker-end="url(#fv)"/>
+      <rect x="250" y="186" width="210" height="50" rx="25" class="b-db"/><text x="355" y="216" text-anchor="middle" class="W">Spring Kafka</text>
+
+      <rect x="30" y="261" width="170" height="50" rx="25" class="b-ext"/><text x="115" y="291" text-anchor="middle" class="W">Npgsql (SQL)</text>
+      <path d="M200,286 H246" class="ln v" marker-end="url(#fv)"/>
+      <rect x="250" y="261" width="210" height="50" rx="25" class="b-db"/><text x="355" y="291" text-anchor="middle" class="W">JdbcClient (SQL)</text>
+
+      <rect x="520" y="36" width="170" height="50" rx="25" class="b-ext"/><text x="605" y="66" text-anchor="middle" class="W">async / await</text>
+      <path d="M690,61 H736" class="ln v" marker-end="url(#fv)"/>
+      <rect x="740" y="36" width="210" height="50" rx="25" class="b-db"/><text x="845" y="66" text-anchor="middle" class="W">hilos virtuales</text>
+
+      <rect x="520" y="111" width="170" height="50" rx="25" class="b-ext"/><text x="605" y="141" text-anchor="middle" class="W">xUnit</text>
+      <path d="M690,136 H736" class="ln v" marker-end="url(#fv)"/>
+      <rect x="740" y="111" width="210" height="50" rx="25" class="b-db"/><text x="845" y="141" text-anchor="middle" class="W">JUnit 5 + AssertJ</text>
+
+      <rect x="520" y="186" width="170" height="50" rx="25" class="b-ext"/><text x="605" y="216" text-anchor="middle" class="W">Testcontainers</text>
+      <path d="M690,211 H736" class="ln v" marker-end="url(#fv)"/>
+      <rect x="740" y="186" width="210" height="50" rx="25" class="b-db"/><text x="845" y="216" text-anchor="middle" class="W">Testcontainers</text>
+
+      <rect x="520" y="261" width="170" height="50" rx="25" class="b-ext"/><text x="605" y="291" text-anchor="middle" class="W">Pruebas de capas</text>
+      <path d="M690,286 H736" class="ln v" marker-end="url(#fv)"/>
+      <rect x="740" y="261" width="210" height="50" rx="25" class="b-db"/><text x="845" y="291" text-anchor="middle" class="W">Maven + ArchUnit</text>
+    </g>
+    <text x="500" y="345" text-anchor="middle" class="S">Idénticos en ambos: contratos V1 · tópicos · migraciones Flyway · Keycloak · OpenTelemetry</text>
+  </svg>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> como comparten tópicos y base de datos, .NET y Java pueden <b>convivir</b> durante la migración, servicio por servicio.</div>
+    <a class="mas" href="eje2-tecnica.html#equivalencias">Ver las 16 equivalencias →</a>
+  </div>
+</section>
+
+<!-- ============ 3 · PETICION ============ -->
+<section id="peticion">
+  <h2><span class="num">03</span>El recorrido de una petición por el código</h2>
+  <p class="lead">Así viaja un evento por las clases de Java. Cada pieza hace <b>una sola cosa</b>, y las decisiones difíciles (contingencia, circuito) se agregan <b>envolviendo</b>, sin tocar el caso de uso.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 360" width="100%" role="img" aria-label="Recorrido de una petición">
+    <rect x="10" y="50" width="100" height="64" rx="10" class="b-ext"/><text x="60" y="87" text-anchor="middle" class="W">Petición</text>
+    <path d="M110,82 H138" class="ln" marker-end="url(#f)"/>
+    <rect x="140" y="40" width="160" height="84" rx="10" class="b-sec"/><text x="220" y="72" text-anchor="middle" class="Tm">Seguridad</text><text x="220" y="93" text-anchor="middle" class="E">token y alcance</text><text x="220" y="110" text-anchor="middle" class="E">Spring Security</text>
+    <path d="M300,82 H328" class="ln" marker-end="url(#f)"/>
+    <rect x="330" y="40" width="160" height="84" rx="10" class="b-app"/><text x="410" y="72" text-anchor="middle" class="Tz">Controller</text><text x="410" y="93" text-anchor="middle" class="E">valida el contrato</text><text x="410" y="110" text-anchor="middle" class="E">y el origen</text>
+    <path d="M490,82 H518" class="ln" marker-end="url(#f)"/>
+    <rect x="520" y="40" width="150" height="84" rx="10" class="b-db"/><text x="595" y="72" text-anchor="middle" class="Tv">RecibirEvento</text><text x="595" y="93" text-anchor="middle" class="E">caso de uso</text><text x="595" y="110" text-anchor="middle" class="E">¿ya llegó?</text>
+    <path d="M670,82 H698" class="ln" marker-end="url(#f)"/>
+
+    <rect x="700" y="20" width="290" height="124" rx="12" class="b-am"/>
+    <text x="845" y="42" text-anchor="middle" class="Ta" style="font-size:13.5px">Contingencia</text>
+    <rect x="718" y="52" width="254" height="82" rx="10" class="b-dlq" style="fill:#2a1616"/>
+    <text x="845" y="72" text-anchor="middle" class="Tr" style="font-size:13.5px">Circuito</text>
+    <rect x="740" y="82" width="210" height="42" rx="8" class="b-kfk"/><text x="845" y="108" text-anchor="middle" class="To">Kafka</text>
+
+    <path d="M220,124 V168" class="ln r" marker-end="url(#fr)"/><rect x="170" y="170" width="100" height="34" rx="17" class="b-dlq"/><text x="220" y="192" text-anchor="middle" class="Tr" style="font-size:14px">401 · 403</text>
+    <path d="M410,124 V168" class="ln r" marker-end="url(#fr)"/><rect x="360" y="170" width="100" height="34" rx="17" class="b-dlq"/><text x="410" y="192" text-anchor="middle" class="Tr" style="font-size:14px">400 · 403</text>
+    <path d="M595,124 V168" class="ln" marker-end="url(#f)"/><rect x="530" y="170" width="130" height="34" rx="17" class="b-ext"/><text x="595" y="192" text-anchor="middle" class="W">200 repetido</text>
+
+    <path d="M920,144 V168" class="ln v" marker-end="url(#fv)"/><rect x="870" y="170" width="100" height="34" rx="17" class="b-db"/><text x="920" y="192" text-anchor="middle" class="Tv" style="font-size:14px">202</text>
+    <path d="M770,144 V178" class="ln d" marker-end="url(#f)"/><text x="778" y="165" class="E">Kafka no confirma</text>
+    <rect x="700" y="180" width="150" height="50" rx="10" class="b-plan"/><text x="775" y="202" text-anchor="middle" class="W">PostgreSQL</text><text x="775" y="220" text-anchor="middle" class="E">plan B → 202</text>
+    <path d="M775,230 V254" class="ln r" marker-end="url(#fr)"/><rect x="700" y="256" width="150" height="34" rx="17" class="b-dlq"/><text x="775" y="278" text-anchor="middle" class="Tr" style="font-size:14px">503 si tampoco</text>
+
+    <rect x="140" y="312" width="350" height="34" rx="8" fill="#0e1824" stroke="#4ea1ff" stroke-dasharray="6 4"/><text x="315" y="334" text-anchor="middle" class="E" style="fill:#4ea1ff">Spring (borde)</text>
+    <rect x="520" y="312" width="150" height="34" rx="8" fill="#0e1f18" stroke="#3ddc97" stroke-dasharray="6 4"/><text x="595" y="334" text-anchor="middle" class="E" style="fill:#3ddc97">Java puro</text>
+    <rect x="700" y="312" width="290" height="34" rx="8" fill="#1d1810" stroke="#ffd166" stroke-dasharray="6 4"/><text x="845" y="334" text-anchor="middle" class="E" style="fill:#ffd166">decoradores + adaptadores</text>
+  </svg>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> <code>RecibirEvento</code> no sabe que existe un plan B; eso es el principio abierto/cerrado en la práctica.</div>
+    <a class="mas" href="eje2-tecnica.html#codigo">Ver el código de cada pieza →</a>
+  </div>
+</section>
+
+<!-- ============ 4 · PRUEBAS ============ -->
+<section id="pruebas">
+  <h2><span class="num">04</span>Qué probaría</h2>
+  <p class="lead">Una pirámide: <b>muchas pruebas rápidas</b> abajo, sobre las reglas del negocio; <b>pocas y realistas</b> arriba, con Kafka y PostgreSQL de verdad y el sistema bajo carga.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 340" width="100%" role="img" aria-label="Pirámide de pruebas">
+    <rect x="20" y="30" width="26" height="290" rx="6" class="b-sec"/>
+    <text transform="translate(38,175) rotate(-90)" text-anchor="middle" class="Tm" style="font-size:13px">ArchUnit en cada compilación</text>
+
+    <polygon points="370,30 300,95 440,95" class="b-dlq"/>
+    <polygon points="300,95 440,95 518,168 222,168" class="b-kfk"/>
+    <polygon points="222,168 518,168 596,240 144,240" class="b-app"/>
+    <polygon points="144,240 596,240 674,315 66,315" class="b-db"/>
+    <text x="370" y="148" text-anchor="middle" class="To">Integración</text>
+    <text x="370" y="212" text-anchor="middle" class="Tz">API y contrato</text>
+    <text x="370" y="285" text-anchor="middle" class="Tv">Dominio y aplicación</text>
+
+    <path d="M430,70 H690"  class="ln d"/><path d="M520,132 H690" class="ln d"/><path d="M600,204 H690" class="ln d"/><path d="M676,278 H690" class="ln d"/>
+    <text x="700" y="66"  class="Tr">Carga y caos</text><text x="700" y="86" class="E">k6, kill del procesador, Kafka caído</text>
+    <text x="700" y="128" class="To">Integración real</text><text x="700" y="148" class="E">Testcontainers: 50 hilos → 1 fila</text>
+    <text x="700" y="200" class="Tz">API y contrato</text><text x="700" y="220" class="E">202/200/400/401/403/429/503 + OpenAPI</text>
+    <text x="700" y="274" class="Tv">Dominio y aplicación</text><text x="700" y="294" class="E">JUnit + falsos a mano, en milisegundos</text>
+    <text x="960" y="20" text-anchor="end" class="E">↑ más lentas, más realistas</text>
+    <text x="960" y="332" text-anchor="end" class="E">↓ más rápidas, más numerosas</text>
+  </svg>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> lo más importante se prueba contra lo real: que 50 copias del mismo evento procesadas a la vez dejen <b>una sola fila</b>.</div>
+    <a class="mas" href="eje2-tecnica.html#pruebas">Ver niveles y ejemplos de prueba →</a>
+  </div>
+</section>
+
+<!-- ============ 5 · CALIDAD ============ -->
+<section id="calidad">
+  <h2><span class="num">05</span>Cómo aseguro la calidad</h2>
+  <p class="lead">Cada cambio pasa por un <b>embudo de compuertas automáticas</b>, y una persona revisa lo que las máquinas no ven. No importa si el código lo escribió una persona o un agente.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 350" width="100%" role="img" aria-label="Embudo de calidad">
+    <rect x="10" y="125" width="130" height="70" rx="10" class="b-ext"/><text x="75" y="155" text-anchor="middle" class="W">Cambio</text><text x="75" y="175" text-anchor="middle" class="E">persona o agente</text>
+    <path d="M140,160 H150" class="ln"/>
+    <polygon points="150,50 330,70 330,250 150,270" class="b-app"/>
+    <polygon points="330,70 510,90 510,230 330,250" class="b-db"/>
+    <polygon points="510,90 690,110 690,210 510,230" class="b-sec"/>
+    <polygon points="690,110 870,130 870,190 690,210" class="b-am"/>
+    <text x="240" y="145" text-anchor="middle" class="Tz">En la máquina</text><text x="240" y="168" text-anchor="middle" class="E">compila sin avisos</text><text x="240" y="186" text-anchor="middle" class="E">formato automático</text>
+    <text x="420" y="145" text-anchor="middle" class="Tv">En el PR</text><text x="420" y="168" text-anchor="middle" class="E">pruebas · ArchUnit</text><text x="420" y="186" text-anchor="middle" class="E">contrato · cobertura</text>
+    <text x="600" y="150" text-anchor="middle" class="Tm">Seguridad</text><text x="600" y="172" text-anchor="middle" class="E">dependencias · secretos</text>
+    <text x="780" y="158" text-anchor="middle" class="Ta" style="font-size:14px">Sistema</text><text x="780" y="176" text-anchor="middle" class="E">humo · staging</text>
+    <path d="M870,160 H888" class="ln v" marker-end="url(#fv)"/>
+    <rect x="890" y="125" width="100" height="70" rx="10" class="b-db"/><text x="940" y="165" text-anchor="middle" class="Tv">Producción</text>
+
+    <rect x="300" y="290" width="400" height="48" rx="10" class="b-ext" style="stroke:#dbe4ee"/>
+    <text x="500" y="312" text-anchor="middle" class="W">Revisión humana</text><text x="500" y="330" text-anchor="middle" class="E">garantías · concurrencia · datos personales · diseño</text>
+    <path d="M420,288 V252" class="ln" marker-end="url(#f)"/>
+  </svg>
+  </div>
+  <div style="margin-top:14px">
+    <span class="chip v">Toda corrección trae su prueba</span>
+    <span class="chip v">Esquema solo con migraciones nuevas</span>
+    <span class="chip v">Contrato compatible hacia atrás</span>
+    <span class="chip v">Decisión importante = ADR</span>
+    <span class="chip v">Si no se ve en métricas, no está terminado</span>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> la calidad no depende de acordarse; está en compuertas que nadie puede saltarse.</div>
+    <a class="mas" href="eje2-tecnica.html#calidad">Ver compuertas y definición de terminado →</a>
+  </div>
+</section>
+
+<!-- ============ 6 · IA ============ -->
+<section id="ia">
+  <h2><span class="num">06</span>IA y agentes en la construcción</h2>
+  <p class="lead">La versión .NET se construyó con un agente de código. Funciona como un ciclo: el agente <b>propone</b>, las compuertas y el sistema real <b>verifican</b>, y una persona <b>responde</b> por el resultado.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 370" width="100%" role="img" aria-label="Ciclo de trabajo con agentes">
+    <rect x="390" y="15" width="220" height="70" rx="12" class="b-ext"/><text x="500" y="44" text-anchor="middle" class="W">1 · Contexto</text><text x="500" y="66" text-anchor="middle" class="E">AGENTS.md · ADR · pruebas</text>
+    <rect x="720" y="95" width="240" height="70" rx="12" class="b-sec"/><text x="840" y="124" text-anchor="middle" class="Tm">2 · El agente propone</text><text x="840" y="146" text-anchor="middle" class="E">un paso pequeño a la vez</text>
+    <rect x="680" y="265" width="260" height="70" rx="12" class="b-app"/><text x="810" y="294" text-anchor="middle" class="Tz">3 · Compuertas</text><text x="810" y="316" text-anchor="middle" class="E">las mismas del código humano</text>
+    <rect x="60" y="265" width="260" height="70" rx="12" class="b-kfk"/><text x="190" y="294" text-anchor="middle" class="To">4 · Verificación real</text><text x="190" y="316" text-anchor="middle" class="E">Docker · carga · caos</text>
+    <rect x="40" y="95" width="240" height="70" rx="12" class="b-db"/><text x="160" y="124" text-anchor="middle" class="Tv">5 · Persona responde</text><text x="160" y="146" text-anchor="middle" class="E">entiende y firma el PR</text>
+
+    <path d="M610,55 L736,93" class="ln" marker-end="url(#f)"/>
+    <path d="M840,165 L818,263" class="ln" marker-end="url(#f)"/>
+    <path d="M680,300 H322" class="ln" marker-end="url(#f)"/>
+    <path d="M170,265 L162,167" class="ln" marker-end="url(#f)"/>
+    <path d="M280,110 L388,62" class="ln" marker-end="url(#f)"/><text x="248" y="68" class="E">nueva regla</text><text x="248" y="84" class="E">si algo falló</text>
+    <path d="M700,265 L760,168" class="ln r d" marker-end="url(#fr)"/><text x="600" y="220" class="E" style="fill:#ff6b6b">si falla, vuelve</text>
+
+    <text x="500" y="175" text-anchor="middle" class="T">El agente acelera;</text>
+    <text x="500" y="200" text-anchor="middle" class="T">la verificación decide.</text>
+  </svg>
+  </div>
+  <div style="margin-top:14px">
+    <span class="chip r">Límite de tamaño ignorado</span>
+    <span class="chip r">localhost resolvía a IPv6</span>
+    <span class="chip r">Fechas no UTC → 28 eventos a la DLQ</span>
+    <span class="chip r">Cuello de botella del procesador</span>
+    <span class="chip r">Tokens en resultados de carga</span>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> ninguno de estos problemas apareció en las pruebas en memoria; salieron al <b>verificar contra el sistema real</b> y al revisar antes de publicar.</div>
+    <a class="mas" href="eje2-tecnica.html#ia">Ver uso, verificación y reglas →</a>
+  </div>
+</section>
+
+<!-- ============ 7 · EJERCICIO ============ -->
+<section id="ejercicio">
+  <h2><span class="num">07</span>Cómo abordo el ejercicio de código</h2>
+  <p class="lead">Sea programar o revisar, sigo el mismo método de cuatro pasos. En código de eventos hay <b>seis trampas</b> que busco siempre.</p>
+
+  <div class="diagrama">
+  <svg viewBox="0 0 1000 220" width="100%" role="img" aria-label="Método de cuatro pasos">
+    <path d="M125,70 H875" class="ln" style="stroke:#243242;stroke-width:4"/>
+    <circle cx="125" cy="70" r="34" class="b-app"/><text x="125" y="77" text-anchor="middle" class="T">1</text>
+    <circle cx="375" cy="70" r="34" class="b-sec"/><text x="375" y="77" text-anchor="middle" class="T">2</text>
+    <circle cx="625" cy="70" r="34" class="b-db"/><text x="625" y="77" text-anchor="middle" class="T">3</text>
+    <circle cx="875" cy="70" r="34" class="b-am"/><text x="875" y="77" text-anchor="middle" class="T">4</text>
+    <text x="125" y="135" text-anchor="middle" class="T" style="font-size:16px">Leer</text><text x="125" y="158" text-anchor="middle" class="S">¿qué garantiza</text><text x="125" y="176" text-anchor="middle" class="S">este código?</text>
+    <text x="375" y="135" text-anchor="middle" class="T" style="font-size:16px">Preguntar</text><text x="375" y="158" text-anchor="middle" class="S">¿y si llega repetido,</text><text x="375" y="176" text-anchor="middle" class="S">desordenado o falla a medias?</text>
+    <text x="625" y="135" text-anchor="middle" class="T" style="font-size:16px">Probar</text><text x="625" y="158" text-anchor="middle" class="S">primero la prueba que</text><text x="625" y="176" text-anchor="middle" class="S">demuestra el problema</text>
+    <text x="875" y="135" text-anchor="middle" class="T" style="font-size:16px">Cambiar</text><text x="875" y="158" text-anchor="middle" class="S">el cambio mínimo</text><text x="875" y="176" text-anchor="middle" class="S">y explicar por qué</text>
+  </svg>
+  </div>
+  <div style="margin-top:14px">
+    <span class="chip r">1 · Confirmar el offset antes de procesar</span>
+    <span class="chip r">2 · Datos personales en los logs</span>
+    <span class="chip r">3 · Comprobar y luego actuar, sin llave única</span>
+    <span class="chip r">4 · Setters que saltan las reglas</span>
+    <span class="chip r">5 · Escribir en la base y en Kafka por separado</span>
+    <span class="chip r">6 · Excepciones tragadas</span>
+  </div>
+  <div class="pie-slide">
+    <div class="clave"><b>Idea clave:</b> en un sistema de eventos, la pregunta más valiosa es <b>"¿qué pasa si esto se ejecuta dos veces o se corta a la mitad?"</b></div>
+    <a class="mas" href="eje2-tecnica.html#ejercicio">Ver revisión resuelta paso a paso →</a>
+  </div>
+</section>
+
+<div class="pie">Repositorio: github.com/yeissonvj/prueba-tcc-envio (rama develop) · detalle en <a href="eje2-tecnica.html" style="color:var(--azul)">eje2-tecnica.html</a></div>
+</main>
+
+<script>
+  const secciones = [...document.querySelectorAll('section')];
+  const enlaces = [...document.querySelectorAll('nav a')];
+  const actual = () => { const y = window.scrollY + 90; let i = 0; secciones.forEach((s, k) => { if (s.offsetTop <= y) i = k; }); return i; };
+  const marcar = () => { const id = secciones[actual()].id; enlaces.forEach(a => a.classList.toggle('activo', a.getAttribute('href') === '#' + id)); };
+  document.addEventListener('scroll', marcar, { passive: true }); marcar();
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown'].includes(e.key)) { e.preventDefault(); secciones[Math.min(actual() + 1, secciones.length - 1)].scrollIntoView(); }
+    if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); secciones[Math.max(actual() - 1, 0)].scrollIntoView(); }
+  });
+</script>
+</body>
+</html>

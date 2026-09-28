@@ -1,0 +1,7 @@
+// UUID v4 sin dependencias externas (k6 no trae crypto.randomUUID en todos los entornos).
+export function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}

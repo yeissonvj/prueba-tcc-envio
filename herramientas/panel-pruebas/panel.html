@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel de pruebas</title>
+<style>
+  :root {
+    --fondo: #0b1016; --panel: #121a23; --panel2: #17212c; --borde: #243242; --texto: #dbe4ee; --tenue: #8a9bb0;
+    --azul: #4ea1ff; --naranja: #ff9f43; --verde: #3ddc97; --morado: #b388ff; --rojo: #ff6b6b; --gris: #6b7b8f; --amarillo: #ffd166;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 14.5px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 22px; border-bottom: 1px solid var(--borde); background: #0d141c; position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 19px; margin: 0 10px 0 0; }
+  .insignia { font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--borde); background: var(--panel2); }
+  .insignia.ok { color: var(--verde); border-color: #1f6b4f; } .insignia.mal { color: var(--rojo); border-color: #6b2a2a; } .insignia.am { color: var(--amarillo); border-color: #6b541f; }
+  .ocupado { margin-left: auto; color: var(--amarillo); font-size: 13px; }
+  main { display: grid; grid-template-columns: 430px 1fr; gap: 16px; padding: 16px 22px 30px; max-width: 1500px; margin: 0 auto; }
+  @media (max-width: 1050px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 15px; margin: 0 0 4px; }
+  .card p.ayuda { color: var(--tenue); font-size: 13px; margin: 0 0 12px; }
+  .componentes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .comp { font-size: 12.5px; padding: 6px 8px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--borde); text-align: center; }
+  .comp.running { border-color: #1f6b4f; color: var(--verde); } .comp.exited, .comp.dead, .comp.created { border-color: #6b2a2a; color: var(--rojo); }
+  .comp .e { display: block; font-size: 11px; color: var(--gris); }
+  label { font-size: 13px; color: var(--tenue); }
+  .fila { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 10px; }
+  .campo { display: flex; flex-direction: column; gap: 3px; }
+  input[type=number] { width: 110px; background: var(--panel2); color: var(--texto); border: 1px solid var(--borde); border-radius: 7px; padding: 7px 9px; font: inherit; }
+  .check { display: flex; align-items: center; gap: 7px; margin: 4px 0 12px; font-size: 13.5px; color: var(--texto); }
+  button { font: inherit; font-size: 13.5px; cursor: pointer; border-radius: 8px; padding: 8px 12px; border: 1px solid var(--borde); background: var(--panel2); color: var(--texto); }
+  button:hover:not(:disabled) { filter: brightness(1.3); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.prim { background: #10243a; border-color: #1d4a7a; color: var(--azul); font-weight: 600; width: 100%; padding: 10px; }
+  button.caer { background: #2a1616; border-color: #6b2a2a; color: #ff9b9b; }
+  button.subir { background: #0f2c22; border-color: #1f6b4f; color: var(--verde); }
+  .grupo { border-top: 1px solid var(--borde); padding: 10px 0 4px; }
+  .grupo:first-of-type { border-top: 0; padding-top: 0; }
+  .grupo .nombre { font-size: 13px; color: var(--tenue); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .grupo .nombre .solo { font-size: 11.5px; color: var(--amarillo); }
+  .botones { display: flex; gap: 6px; flex-wrap: wrap; }
+  .resultado { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .dato { background: var(--panel2); border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; }
+  .dato .v { font-family: var(--mono); font-size: 24px; font-weight: 700; }
+  .dato .l { font-size: 12px; color: var(--tenue); }
+  .veredicto { margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-weight: 600; }
+  .veredicto.ok { background: #0f2c22; border: 1px solid #1f6b4f; color: var(--verde); } .veredicto.mal { background: #2a1616; border: 1px solid #6b2a2a; color: var(--rojo); }
+  #registro { background: #070b10; border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; height: 560px; overflow-y: auto; font-family: var(--mono); font-size: 12.5px; }
+  #registro div { padding: 1px 0; white-space: pre-wrap; word-break: break-word; }
+  #registro .h { color: var(--gris); margin-right: 8px; }
+  #registro .titulo { color: var(--azul); font-weight: 700; margin-top: 8px; } #registro .ok { color: var(--verde); } #registro .mal { color: var(--rojo); }
+  #registro .nota { color: var(--tenue); } #registro .info { color: var(--texto); }
+  .vacio { color: var(--gris); }
+  .pie { color: var(--gris); font-size: 12px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Panel de pruebas · Plataforma de eventos</h1>
+  <span id="entorno" class="insignia">detectando…</span>
+  <span id="salud" class="insignia">API: —</span>
+  <span id="ocupado" class="ocupado"></span>
+</header>
+
+<main>
+  <div>
+    <div class="card">
+      <h2>Componentes</h2>
+      <p class="ayuda">Estado de los contenedores del entorno levantado. Se actualiza solo.</p>
+      <div id="componentes" class="componentes"><span class="vacio">—</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Prueba de carga</h2>
+      <p class="ayuda">k6 envía eventos a tasa constante y al final se reconcilia: cada 202 debe estar en PostgreSQL.</p>
+      <div class="fila">
+        <div class="campo"><label for="tasa">Eventos por segundo</label><input id="tasa" type="number" min="1" max="2000"></div>
+        <div class="campo"><label for="duracion">Duración (s)</label><input id="duracion" type="number" min="5" max="600"></div>
+        <div class="campo"><label>Total aprox.</label><strong id="total" style="padding:7px 0">—</strong></div>
+      </div>
+      <label class="check"><input id="matar" type="checkbox"> Hacer <b>kill</b> del procesador a mitad de la carga</label>
+      <button id="btnCarga" class="prim" data-accion="carga">▶ Iniciar prueba de carga</button>
+      <p class="pie" id="avisoAiven"></p>
+    </div>
+
+    <div class="card">
+      <h2>Fallas controladas</h2>
+      <p class="ayuda">Cada falla queda activa hasta que la recuperes. Mientras tanto puedes enviar eventos o lanzar una carga.</p>
+      <div class="grupo">
+        <div class="nombre">Kafka <span class="solo" data-solo-local>solo entorno local</span></div>
+        <div class="botones">
+          <button class="caer" data-falla="broker-1" data-local>1 broker caído</button>
+          <button class="caer" data-falla="broker-2" data-local>2 brokers caídos</button>
+          <button class="caer" data-falla="kafka-completo" data-local>Kafka completo</button>
+          <button class="subir" data-falla="recuperar-kafka" data-local>Recuperar</button>
+        </div>
+      </div>
+      <div class="grupo">
+        <div class="nombre">PostgreSQL <span class="solo" data-solo-local>solo entorno local</span></div>
+        <div class="botones"><button class="caer" data-falla="postgres" data-local>Tumbar</button><button class="subir" data-falla="recuperar-postgres" data-local>Recuperar</button></div>
+      </div>
+      <div class="grupo">
+        <div class="nombre">Procesador</div>
+        <div class="botones"><button class="caer" data-falla="procesador">Detener</button><button class="subir" data-falla="recuperar-procesador">Iniciar</button></div>
+      </div>
+      <div class="grupo">
+        <div class="nombre">Redis</div>
+        <div class="botones"><button class="caer" data-falla="redis">Tumbar</button><button class="subir" data-falla="recuperar-redis">Recuperar</button></div>
+      </div>
+      <div class="grupo">
+        <div class="nombre">Proveedor de SMS</div>
+        <div class="botones"><button class="caer" data-falla="sms">Simular caída</button><button class="subir" data-falla="recuperar-sms">Recuperar</button></div>
+      </div>
+      <div class="grupo">
+        <button class="subir" data-falla="recuperar-todo" style="width:100%">↺ Recuperar todo</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Eventos de prueba</h2>
+      <p class="ayuda">Envía eventos uno a uno, muestra cada respuesta, repite uno para ver la idempotencia y espera a que el estado sea visible.</p>
+      <div class="fila">
+        <div class="campo"><label for="cantidad">Cantidad</label><input id="cantidad" type="number" min="1" max="200" value="10"></div>
+        <button id="btnEventos" style="flex:1">✉ Enviar eventos de prueba</button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Último resultado</h2>
+      <div id="resultado"><p class="vacio">Todavía no hay resultados. Lanza una prueba.</p></div>
+    </div>
+    <div class="card">
+      <h2 style="display:flex;justify-content:space-between">Registro en vivo <button id="limpiar" style="padding:3px 9px;font-size:12px">Limpiar vista</button></h2>
+      <div id="registro"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  let entorno = null, ocupado = false, leidas = 0, sugerenciaAplicada = null, ultimoResultado = '';
+
+  async function post(url, cuerpo) {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo || {}) });
+    if (r.status === 409) alert((await r.json()).error || 'Ya hay una prueba en curso: espera a que termine.');
+    else if (!r.ok) alert('No se pudo lanzar: ' + ((await r.json()).error || r.status));
+  }
+
+  function aplicarEstado(d) {
+    entorno = d.entorno; ocupado = !!d.tarea;
+    const ins = $('#entorno');
+    ins.textContent = entorno ? 'Entorno: ' + d.entornos[entorno].nombre : 'Ningún entorno levantado';
+    ins.className = 'insignia ' + (entorno ? 'ok' : 'mal');
+    const salud = d.salud || '—';
+    $('#salud').textContent = 'API: ' + salud;
+    $('#salud').className = 'insignia ' + (salud === 'Healthy' ? 'ok' : salud === 'Degraded' ? 'am' : entorno ? 'mal' : '');
+    $('#ocupado').textContent = d.tarea ? '⏳ En curso: ' + d.tarea : '';
+
+    const comps = d.componentes || {};
+    $('#componentes').innerHTML = Object.keys(comps).length
+      ? Object.entries(comps).map(([n, e]) => `<div class="comp ${e}">${n}<span class="e">${e === 'running' ? 'arriba' : e}</span></div>`).join('')
+      : '<span class="vacio">Levanta el entorno local o el de Aiven.</span>';
+
+    if (entorno && sugerenciaAplicada !== entorno) {
+      const s = d.entornos[entorno].carga_sugerida;
+      $('#tasa').value = s.tasa; $('#duracion').value = s.duracion; sugerenciaAplicada = entorno; total();
+    }
+    $('#avisoAiven').textContent = entorno === 'aiven'
+      ? 'En Aiven el procesador (local) escribe en una base remota a ~5 ev/s: con cargas grandes la reconciliación tarda varios minutos.' : '';
+
+    document.querySelectorAll('button').forEach((b) => {
+      if (b.id === 'limpiar') return;
+      b.disabled = !entorno || ocupado || (b.hasAttribute('data-local') && entorno !== 'local');
+    });
+    document.querySelectorAll('[data-solo-local]').forEach((e) => e.style.visibility = entorno === 'local' ? 'hidden' : 'visible');
+
+    const clave = JSON.stringify(d.resultado);
+    if (d.resultado && clave !== ultimoResultado) { ultimoResultado = clave; pintarResultado(d.resultado); }
+  }
+
+  function pintarResultado(r) {
+    const n = (x) => Number(x).toLocaleString('es-CO');
+    if (r.tipo === 'carga') {
+      $('#resultado').innerHTML = `
+        <div class="resultado">
+          <div class="dato"><div class="v">${n(r.aceptados)}</div><div class="l">aceptados (202)</div></div>
+          <div class="dato"><div class="v">${n(r.en_base)}</div><div class="l">en PostgreSQL</div></div>
+          <div class="dato"><div class="v">${r.p95} ms</div><div class="l">p95 de ingesta</div></div>
+          <div class="dato"><div class="v">${r.p99} ms</div><div class="l">p99 de ingesta</div></div>
+        </div>
+        <div class="veredicto ${r.diferencia === 0 ? 'ok' : 'mal'}">${r.diferencia === 0
+          ? '✓ Cero eventos perdidos' + (r.kill ? ', incluso con kill del procesador' : '') : '✗ Diferencia de ' + n(r.diferencia) + ' eventos'}
+          <span style="font-weight:400;color:var(--tenue)"> · corrida ${r.corrida}${r.no_aceptados ? ' · ' + n(r.no_aceptados) + ' no aceptados por la API' : ''}</span></div>`;
+    } else if (r.tipo === 'eventos') {
+      const codigos = Object.entries(r.codigos || {}).map(([c, k]) => `${c === '0' ? 'sin respuesta' : c}: ${k}`).join(' · ');
+      $('#resultado').innerHTML = `
+        <div class="resultado">
+          <div class="dato"><div class="v">${r.aceptados}</div><div class="l">aceptados (202)</div></div>
+          <div class="dato"><div class="v">${r.visibles ?? 0}</div><div class="l">con estado visible</div></div>
+          <div class="dato" style="grid-column: span 2"><div class="v" style="font-size:16px">${codigos || '—'}</div><div class="l">respuestas HTTP</div></div>
+        </div>`;
+    }
+  }
+
+  async function sondearEstado() {
+    try { aplicarEstado(await (await fetch('/api/estado')).json()); } catch { $('#entorno').textContent = 'Panel sin conexión'; }
+  }
+  async function sondearRegistro() {
+    try {
+      const d = await (await fetch('/api/registro?desde=' + leidas)).json();
+      const caja = $('#registro'), abajo = caja.scrollTop + caja.clientHeight >= caja.scrollHeight - 20;
+      for (const l of d.lineas) {
+        const div = document.createElement('div');
+        div.className = l.tipo;
+        div.innerHTML = `<span class="h">${l.hora}</span>`;
+        div.append(document.createTextNode(l.texto));
+        caja.append(div);
+      }
+      leidas = d.total;
+      if (abajo) caja.scrollTop = caja.scrollHeight;
+      if (d.tarea && !ocupado) sondearEstado();
+    } catch {}
+  }
+
+  function total() {
+    const t = Number($('#tasa').value) * Number($('#duracion').value);
+    $('#total').textContent = t ? t.toLocaleString('es-CO') + ' eventos' : '—';
+  }
+  $('#tasa').addEventListener('input', total); $('#duracion').addEventListener('input', total);
+  $('#btnCarga').addEventListener('click', () => post('/api/carga', { tasa: +$('#tasa').value, duracion: +$('#duracion').value, matar_procesador: $('#matar').checked }).then(sondearEstado));
+  $('#btnEventos').addEventListener('click', () => post('/api/eventos', { cantidad: +$('#cantidad').value }).then(sondearEstado));
+  document.querySelectorAll('[data-falla]').forEach((b) => b.addEventListener('click', () => post('/api/falla/' + b.dataset.falla).then(sondearEstado)));
+  $('#limpiar').addEventListener('click', () => $('#registro').innerHTML = '');
+
+  sondearEstado(); sondearRegistro();
+  setInterval(sondearEstado, 3000); setInterval(sondearRegistro, 1000);
+</script>
+</body>
+</html>
