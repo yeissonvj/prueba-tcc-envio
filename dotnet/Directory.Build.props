@@ -1,7 +1,13 @@
-﻿<Project>
+<Project>
   <PropertyGroup>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <WarningsAsErrors>nullable</WarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- Código de producción (dotnet/src): genera la documentación XML y avisa (CS1591) si un miembro
+       público queda sin documentar; con -warnaserror en el pipeline, eso detiene la compilación. -->
+  <PropertyGroup Condition="$(MSBuildProjectDirectory.Replace('\', '/').Contains('/src/'))">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 </Project>

@@ -7,11 +7,20 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using TccEventos.Infraestructura.Observabilidad;
 
+// ============================================================================================
+// Punto de entrada de la API de ingesta y consulta (host HTTP).
+//   POST /api/v1/eventos-guia   recibe eventos y los deja durables (Kafka o contingencia).
+//   GET  /api/v1/guias/{numero} consulta estado e historial.
+//   GET  /salud/viva, /salud/lista sondas para el orquestador.
+// Aquí solo se arma la aplicación; qué adaptador implementa cada puerto se decide en RegistroServicios.
+// ============================================================================================
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Un evento pesa ~1 KB; 64 KB evita que un cuerpo gigante agote la memoria (defecto: 30 MB).
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 64 * 1024);
 
+// Servicios: documentación, errores como ProblemDetails, casos de uso y adaptadores, salud, seguridad y observabilidad.
 builder.Services.AgregarDocumentacion();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorPeticionInvalida>();
@@ -26,13 +35,16 @@ builder.AgregarObservabilidad("tcc-api",
 
 var app = builder.Build();
 
+// Tubería HTTP: primero el manejo de errores, luego autenticación, autorización y límite por cliente.
 app.UseExceptionHandler();
 app.UsarSeguridad();
 
+// Rutas.
 app.MapDocumentacion();
 app.MapSalud();
 app.MapEventosGuia();
 app.MapGuias();
 
+// Precalienta Kafka, Redis y las llaves del emisor de tokens para que la primera petición no pague ese costo.
 await app.CalentarDependenciasAsync();
 app.Run();

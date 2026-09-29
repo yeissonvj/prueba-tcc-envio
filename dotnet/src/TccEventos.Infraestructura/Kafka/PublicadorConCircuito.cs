@@ -6,13 +6,27 @@ using TccEventos.Dominio;
 
 namespace TccEventos.Infraestructura.Kafka;
 
+/// <summary>
 /// Patrón Decorador + Circuit Breaker: si el broker falla de forma sostenida, durante un tiempo
 /// se falla al instante en vez de esperar el timeout de entrega en cada petición.
+/// </summary>
+/// <remarks>
+/// Se abre si en la ventana falla al menos la mitad de un mínimo de envíos; mientras está abierto,
+/// los eventos van directo a la contingencia.
+/// </remarks>
 public sealed class PublicadorConCircuito : IPublicadorEventos
 {
+    /// <summary>Publicador real que se protege.</summary>
     private readonly IPublicadorEventos _interno;
+
+    /// <summary>Circuito de Polly.</summary>
     private readonly ResiliencePipeline _circuito;
 
+    /// <summary>Crea el decorador con los umbrales configurados.</summary>
+    /// <param name="interno">Publicador real (Kafka).</param>
+    /// <param name="opciones">Umbrales del circuito.</param>
+    /// <param name="logger">Registro de aperturas y cierres del circuito.</param>
+    /// <param name="reloj">Reloj del circuito; se reemplaza en las pruebas.</param>
     public PublicadorConCircuito(
         IPublicadorEventos interno,
         OpcionesKafka opciones,
@@ -47,6 +61,11 @@ public sealed class PublicadorConCircuito : IPublicadorEventos
             .Build();
     }
 
+    /// <summary>Publica a través del circuito.</summary>
+    /// <param name="evento">Evento a publicar.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Una tarea que termina cuando Kafka confirmó.</returns>
+    /// <exception cref="PublicacionFallidaException">Kafka falló o el circuito está abierto.</exception>
     public async Task PublicarAsync(EventoGuia evento, CancellationToken ct)
     {
         try

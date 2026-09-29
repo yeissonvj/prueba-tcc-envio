@@ -4,14 +4,24 @@ using TccEventos.Infraestructura.Observabilidad;
 
 namespace TccEventos.Api.Errores;
 
-/// Traduce "el evento no quedó durable" a 503 + Retry-After.
-/// El detalle técnico (broker, causa) va al log, nunca al cliente.
+/// <summary>
+/// Eslabón de la cadena de manejadores de errores: traduce "el evento no quedó durable" a 503 + Retry-After.
+/// </summary>
+/// <remarks>El detalle técnico (broker, causa) va al log, nunca al cliente.</remarks>
+/// <param name="problemDetails">Servicio que escribe la respuesta como ProblemDetails.</param>
+/// <param name="logger">Registro del error.</param>
 public sealed class ManejadorPublicacionFallida(
     IProblemDetailsService problemDetails,
     ILogger<ManejadorPublicacionFallida> logger) : IExceptionHandler
 {
+    /// <summary>Segundos que se le piden al emisor esperar antes de reintentar.</summary>
     public const int SegundosParaReintentar = 5;
 
+    /// <summary>Atiende solo <see cref="PublicacionFallidaException"/>; cualquier otro error lo deja pasar.</summary>
+    /// <param name="http">Contexto de la petición.</param>
+    /// <param name="excepcion">Error ocurrido.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns><see langword="true"/> si respondió 503; <see langword="false"/> si no es su tipo de error.</returns>
     public async ValueTask<bool> TryHandleAsync(HttpContext http, Exception excepcion, CancellationToken ct)
     {
         if (excepcion is not PublicacionFallidaException)

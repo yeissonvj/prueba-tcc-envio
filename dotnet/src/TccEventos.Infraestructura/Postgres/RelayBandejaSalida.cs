@@ -3,15 +3,27 @@ using TccEventos.Infraestructura.Kafka;
 
 namespace TccEventos.Infraestructura.Postgres;
 
-/// Publica la bandeja de salida (outbox) en guias.estados.cambiados y borra lo publicado.
+/// <summary>
+/// Publica la bandeja de salida (outbox) en guias.estados.cambiados y borra lo publicado
+/// (patrones Transactional Outbox y Líder único).
+/// </summary>
+/// <remarks>
 /// Un solo relay activo a la vez (advisory lock): si varias instancias publicaran en paralelo,
 /// dos cambios de la misma guía podrían salir desordenados.
+/// </remarks>
+/// <param name="baseDatos">Fuente de conexiones a PostgreSQL.</param>
+/// <param name="productor">Productor durable de Kafka.</param>
+/// <param name="opciones">Opciones de Kafka (nombre del tópico).</param>
 public sealed class RelayBandejaSalida(NpgsqlDataSource baseDatos, ProductorKafka productor, OpcionesKafka opciones)
 {
     // Identificador arbitrario y fijo del candado "relay de bandeja de salida".
+    /// <summary>Identificador del advisory lock que asegura un solo relay activo.</summary>
     private const long ClaveCandado = 7_100_600_001;
 
-    /// Devuelve cuántos mensajes publicó; 0 si no había pendientes u otra instancia tiene el candado.
+    /// <summary>Publica en orden un lote de cambios pendientes de la bandeja de salida.</summary>
+    /// <param name="maximo">Tamaño máximo del lote.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Cuántos mensajes publicó; 0 si no había pendientes u otra instancia tiene el candado.</returns>
     public async Task<int> PublicarPendientesAsync(int maximo, CancellationToken ct)
     {
         await using var conexion = await baseDatos.OpenConnectionAsync(ct);
@@ -71,6 +83,10 @@ public sealed class RelayBandejaSalida(NpgsqlDataSource baseDatos, ProductorKafk
     }
 
     // El contexto de traza guardado con el cambio reengancha la publicación a la traza del evento original.
+    /// <summary>Arma los encabezados del mensaje: el contrato y, si existe, la traza guardada con el cambio.</summary>
+    /// <param name="tipo">Nombre del contrato del mensaje.</param>
+    /// <param name="traza">Contexto de traza W3C guardado en la fila, si lo hay.</param>
+    /// <returns>Los encabezados para el productor.</returns>
     private static Dictionary<string, string> Encabezados(string tipo, string? traza)
     {
         var encabezados = new Dictionary<string, string> { ["contrato"] = tipo };

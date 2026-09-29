@@ -11,10 +11,18 @@ using OpenTelemetry.Trace;
 
 namespace TccEventos.Infraestructura.Observabilidad;
 
+/// <summary>Configura OpenTelemetry en los tres hosts de la misma forma.</summary>
 public static class RegistroObservabilidad
 {
+    /// <summary>
     /// Trazas, métricas y logs por OTLP hacia el Collector (Observabilidad:OtlpEndpoint; vacío = no exporta,
     /// útil en pruebas). Además, logs en la consola: JSON con TraceId/SpanId fuera de Desarrollo.
+    /// </summary>
+    /// <param name="builder">Constructor del host.</param>
+    /// <param name="nombreServicio">Nombre del servicio en trazas, métricas y logs (tcc-api, tcc-procesador...).</param>
+    /// <param name="trazas">Instrumentación de trazas adicional del host (por ejemplo, ASP.NET Core).</param>
+    /// <param name="metricas">Instrumentación de métricas adicional del host.</param>
+    /// <returns>El mismo constructor, para encadenar llamadas.</returns>
     public static IHostApplicationBuilder AgregarObservabilidad(
         this IHostApplicationBuilder builder,
         string nombreServicio,

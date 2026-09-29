@@ -3,10 +3,17 @@ using TccEventos.Contratos.V1;
 
 namespace TccEventos.Infraestructura.Consultas;
 
+/// <summary>Implementación de <see cref="IConsultaGuias"/> sobre PostgreSQL.</summary>
+/// <param name="baseDatos">Fuente de conexiones a PostgreSQL.</param>
 public sealed class ConsultaGuiasPostgres(NpgsqlDataSource baseDatos) : IConsultaGuias
 {
+    /// <summary>Cantidad máxima de eventos del historial que se devuelven.</summary>
     public const int MaximoHistorial = 100;
 
+    /// <summary>Lee el estado y los últimos eventos de la guía en un solo viaje a la base.</summary>
+    /// <param name="numeroGuia">Número de la guía.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>La guía con su historial (más reciente primero), o <see langword="null"/> si no existe.</returns>
     public async Task<GuiaV1?> ObtenerAsync(string numeroGuia, CancellationToken ct)
     {
         // Las dos lecturas en un solo viaje a la base.

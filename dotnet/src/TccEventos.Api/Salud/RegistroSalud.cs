@@ -3,13 +3,24 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace TccEventos.Api.Salud;
 
+/// <summary>Sondas de salud de la API: /salud/viva y /salud/lista.</summary>
 public static class RegistroSalud
 {
+    /// <summary>Clave de la sonda de Kafka en el contenedor de servicios.</summary>
     public const string SondaKafka = "kafka";
+
+    /// <summary>Clave de la sonda de la contingencia (PostgreSQL).</summary>
     public const string SondaContingencia = "contingencia";
+
+    /// <summary>Clave de la sonda del filtro de duplicados (Redis).</summary>
     public const string SondaFiltro = "filtro";
+
+    /// <summary>Etiqueta de las verificaciones que cuentan para /salud/lista.</summary>
     private const string EtiquetaLista = "lista";
 
+    /// <summary>Registra las tres sondas y las dos verificaciones de "lista".</summary>
+    /// <param name="services">Contenedor de servicios.</param>
+    /// <returns>El mismo contenedor, para encadenar llamadas.</returns>
     public static IServiceCollection AgregarSalud(this IServiceCollection services)
     {
         services.AddKeyedSingleton<ISonda, SondaKafka>(SondaKafka);
@@ -33,6 +44,11 @@ public static class RegistroSalud
         return services;
     }
 
+    /// <summary>
+    /// Publica /salud/viva (sin dependencias externas) y /salud/lista (200 si Healthy o Degraded, 503 si Unhealthy).
+    /// </summary>
+    /// <param name="app">Constructor de rutas.</param>
+    /// <returns>El mismo constructor, para encadenar llamadas.</returns>
     public static IEndpointRouteBuilder MapSalud(this IEndpointRouteBuilder app)
     {
         // Vida: sin dependencias externas. Si revisara Kafka, una caída de Kafka reiniciaría todos los pods.
