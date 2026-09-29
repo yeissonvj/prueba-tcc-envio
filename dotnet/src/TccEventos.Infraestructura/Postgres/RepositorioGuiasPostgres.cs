@@ -9,13 +9,24 @@ using TccEventos.Infraestructura.Mapeo;
 
 namespace TccEventos.Infraestructura.Postgres;
 
-/// Adaptador de IRepositorioGuias sobre las tablas de la migración V2.
+/// <summary>
+/// Adaptador de <see cref="IRepositorioGuias"/> sobre las tablas de la migración V2 (patrones Repositorio,
+/// Inbox y Transactional Outbox).
+/// </summary>
+/// <remarks>
 /// Historial (inbox) + estado + bandeja de salida en UNA transacción y un solo viaje a la base (NpgsqlBatch).
 /// Las fechas se escriben en UTC (Npgsql lo exige para timestamptz); el offset original se conserva en el JSON del contrato.
+/// </remarks>
+/// <param name="baseDatos">Fuente de conexiones a PostgreSQL.</param>
 public sealed class RepositorioGuiasPostgres(NpgsqlDataSource baseDatos) : IRepositorioGuias
 {
+    /// <summary>Reglas de serialización web (camelCase) para el cambio que va a la bandeja de salida.</summary>
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
+    /// <summary>Consulta el inbox: indica si el evento ya está en historial_eventos.</summary>
+    /// <param name="idEvento">Identificador del evento.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns><see langword="true"/> si el evento ya se procesó.</returns>
     public async Task<bool> ExisteEventoAsync(Guid idEvento, CancellationToken ct)
     {
         await using var comando = baseDatos.CreateCommand(
@@ -25,6 +36,10 @@ public sealed class RepositorioGuiasPostgres(NpgsqlDataSource baseDatos) : IRepo
         return (bool)(await comando.ExecuteScalarAsync(ct))!;
     }
 
+    /// <summary>Carga la guía desde la tabla guias y la reconstruye como objeto del dominio.</summary>
+    /// <param name="numeroGuia">Número de la guía.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>La guía, o <see langword="null"/> si no existe.</returns>
     public async Task<Guia?> ObtenerAsync(string numeroGuia, CancellationToken ct)
     {
         await using var comando = baseDatos.CreateCommand(
@@ -42,6 +57,19 @@ public sealed class RepositorioGuiasPostgres(NpgsqlDataSource baseDatos) : IRepo
             lector.GetInt64(2));
     }
 
+    /// <summary>
+    /// Guarda en una sola transacción: la línea del historial (inbox) y, si el evento se aplicó,
+    /// el nuevo estado (con control de versión) y el cambio en la bandeja de salida.
+    /// </summary>
+    /// <param name="guia">Guía con el estado ya actualizado en memoria.</param>
+    /// <param name="evento">Evento procesado.</param>
+    /// <param name="resultado">Resultado de aplicar el evento.</param>
+    /// <param name="estadoAnterior">Estado previo; <see langword="null"/> si el evento creó la guía (INSERT en vez de UPDATE).</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Una tarea que termina cuando la transacción se confirmó.</returns>
+    /// <exception cref="ConflictoConcurrenciaException">
+    /// Otra instancia guardó el evento o cambió la guía primero; se hace rollback completo.
+    /// </exception>
     public async Task GuardarAsync(
         Guia guia, EventoGuia evento, ResultadoAplicacion resultado, EstadoGuia? estadoAnterior, CancellationToken ct)
     {
@@ -100,6 +128,10 @@ public sealed class RepositorioGuiasPostgres(NpgsqlDataSource baseDatos) : IRepo
         await transaccion.CommitAsync(ct);
     }
 
+    /// <summary>Crea una sentencia del lote con parámetros posicionales ($1, $2...).</summary>
+    /// <param name="sql">Sentencia SQL parametrizada.</param>
+    /// <param name="valores">Valores de los parámetros, en orden.</param>
+    /// <returns>La sentencia lista para agregar al lote.</returns>
     private static NpgsqlBatchCommand Comando(string sql, params object[] valores)
     {
         var comando = new NpgsqlBatchCommand(sql);

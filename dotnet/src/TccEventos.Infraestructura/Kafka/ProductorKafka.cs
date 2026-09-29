@@ -6,13 +6,18 @@ using TccEventos.Infraestructura.Observabilidad;
 
 namespace TccEventos.Infraestructura.Kafka;
 
+/// <summary>
 /// Único lugar con la configuración de durabilidad del productor. Todo lo que publica en Kafka
 /// (ingesta, outbox, DLQ) pasa por aquí, así nadie publica con garantías distintas por accidente.
-/// Es thread-safe y costoso: se registra como singleton.
+/// </summary>
+/// <remarks>Es thread-safe y costoso: se registra como singleton.</remarks>
 public sealed class ProductorKafka : IDisposable
 {
+    /// <summary>Productor de Confluent.Kafka configurado para durabilidad.</summary>
     private readonly IProducer<string, string> _productor;
 
+    /// <summary>Crea el productor con acks=all, idempotencia y compresión lz4.</summary>
+    /// <param name="opciones">Opciones de conexión y tiempos de entrega.</param>
     public ProductorKafka(OpcionesKafka opciones)
     {
         var configuracion = opciones.ConfigurarConexion(new ProducerConfig
@@ -28,7 +33,14 @@ public sealed class ProductorKafka : IDisposable
         _productor = new ProducerBuilder<string, string>(configuracion).Build();
     }
 
-    /// Solo termina con éxito si Kafka confirmó el mensaje con acks=all.
+    /// <summary>Publica un mensaje y espera la confirmación de Kafka con acks=all.</summary>
+    /// <param name="topico">Tópico destino.</param>
+    /// <param name="clave">Clave del mensaje (el número de guía: define la partición y el orden).</param>
+    /// <param name="valor">Contenido del mensaje (JSON).</param>
+    /// <param name="encabezados">Encabezados; si trae traceparent, la publicación cuelga de esa traza.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Una tarea que solo termina con éxito si Kafka confirmó el mensaje.</returns>
+    /// <exception cref="PublicacionFallidaException">Kafka no confirmó el mensaje.</exception>
     public async Task PublicarAsync(
         string topico, string clave, string valor,
         IReadOnlyDictionary<string, string> encabezados, CancellationToken ct)
@@ -64,9 +76,10 @@ public sealed class ProductorKafka : IDisposable
         }
     }
 
-    /// Contexto W3C (traceparent) que viaja en los encabezados de Kafka.
+    /// <summary>Contexto W3C (traceparent) que viaja en los encabezados de Kafka.</summary>
     public const string EncabezadoTraza = "traceparent";
 
+    /// <summary>Envía lo que quedó pendiente (hasta 10 s) y libera el productor.</summary>
     public void Dispose()
     {
         _productor.Flush(TimeSpan.FromSeconds(10));

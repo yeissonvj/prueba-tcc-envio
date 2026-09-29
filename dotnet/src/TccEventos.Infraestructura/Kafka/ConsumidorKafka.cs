@@ -7,9 +7,18 @@ using TccEventos.Infraestructura.Observabilidad;
 
 namespace TccEventos.Infraestructura.Kafka;
 
-/// Qué consumir y cómo:
-/// - Vencimiento: cuándo se puede procesar cada mensaje (tópicos de reintento con demora). Solo secuencial.
-/// - ParticionesEnParalelo: un trabajador por partición (orden por partición, particiones en paralelo).
+/// <summary>
+/// Qué consumir de Kafka y cómo.
+/// </summary>
+/// <param name="Topico">Tópico a consumir.</param>
+/// <param name="Grupo">Grupo de consumo; cada grupo lee todos los mensajes a su propio ritmo.</param>
+/// <param name="Vencimiento">
+/// Cuándo se puede procesar cada mensaje (tópicos de reintento con demora). Solo compatible con el consumo secuencial.
+/// </param>
+/// <param name="ParticionesEnParalelo">
+/// Un trabajador por partición: orden dentro de la partición y particiones en paralelo.
+/// </param>
+/// <param name="CapacidadPorParticion">Mensajes en cola por partición antes de pausarla (contrapresión).</param>
 public record SuscripcionKafka(
     string Topico,
     string Grupo,
@@ -17,10 +26,20 @@ public record SuscripcionKafka(
     bool ParticionesEnParalelo = false,
     int CapacidadPorParticion = 200);
 
-/// Bucle de consumo reutilizable: leer → (esperar vencimiento) → manejar → marcar offset.
+/// <summary>
+/// Bucle de consumo reutilizable (patrón Plantilla): leer → (esperar vencimiento) → manejar → marcar offset.
+/// Cada host aporta solo la función que maneja el mensaje.
+/// </summary>
+/// <remarks>
 /// Offsets: se guardan (StoreOffset) solo DESPUÉS de manejar el mensaje y Kafka los confirma en lote cada
 /// segundo. Si el proceso cae se releen unos pocos mensajes; los manejadores son idempotentes.
 /// El manejador solo debe retornar cuando el mensaje quedó resuelto (procesado, reprogramado o en DLQ).
+/// </remarks>
+/// <param name="kafka">Opciones de conexión a Kafka.</param>
+/// <param name="suscripcion">Qué tópico y grupo consumir, y de qué forma.</param>
+/// <param name="manejar">Función que resuelve cada mensaje.</param>
+/// <param name="registros">Fábrica de loggers (el logger lleva el nombre del tópico).</param>
+/// <param name="reloj">Reloj para calcular los vencimientos (reemplazable en pruebas).</param>
 public sealed class ConsumidorKafka(
     OpcionesKafka kafka,
     SuscripcionKafka suscripcion,
@@ -28,15 +47,27 @@ public sealed class ConsumidorKafka(
     ILoggerFactory registros,
     TimeProvider reloj) : BackgroundService
 {
+    /// <summary>Logger con el tópico en su nombre, para distinguir los consumidores de un mismo host.</summary>
     private readonly ILogger _logger = registros.CreateLogger($"{typeof(ConsumidorKafka).FullName}[{suscripcion.Topico}]");
 
     // Tiempo máximo que un rebalanceo espera a que termine el mensaje en curso de una partición revocada.
+    /// <summary>Espera máxima por el mensaje en curso cuando se revoca una partición.</summary>
     private static readonly TimeSpan EsperaMaximaAlRevocar = TimeSpan.FromSeconds(30);
 
     // Consume() es bloqueante: corre en su propio hilo para no detener el arranque del host.
+    /// <summary>Punto de entrada del servicio en segundo plano: arranca el bucle de consumo en un hilo propio.</summary>
+    /// <param name="ct">Se activa cuando el host se detiene.</param>
+    /// <returns>Una tarea que termina cuando el consumo se detiene.</returns>
     protected override Task ExecuteAsync(CancellationToken ct) =>
         Task.Factory.StartNew(() => ConsumirAsync(ct), ct, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
 
+    /// <summary>
+    /// Bucle principal: configura el consumidor durable, se suscribe y entrega cada mensaje al manejador
+    /// (en orden o por partición en paralelo) hasta que el host se detiene.
+    /// </summary>
+    /// <param name="ct">Se activa cuando el host se detiene.</param>
+    /// <returns>Una tarea que termina al cerrar el consumidor de forma ordenada.</returns>
+    /// <exception cref="InvalidOperationException">Si se pide vencimiento junto con particiones en paralelo.</exception>
     private async Task ConsumirAsync(CancellationToken ct)
     {
         if (suscripcion.ParticionesEnParalelo && suscripcion.Vencimiento is not null)
@@ -123,6 +154,11 @@ public sealed class ConsumidorKafka(
         }
     }
 
+    /// <summary>Maneja el mensaje y, solo después, guarda su offset para confirmarlo.</summary>
+    /// <param name="consumidor">Consumidor de Kafka dueño de la partición.</param>
+    /// <param name="registro">Mensaje leído.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Una tarea que termina cuando el mensaje quedó resuelto y marcado.</returns>
     private async Task ManejarYMarcarAsync(IConsumer<string, string> consumidor, ConsumeResult<string, string> registro, CancellationToken ct)
     {
         await ManejarConTrazaAsync(AMensaje(registro), ct);
@@ -137,8 +173,15 @@ public sealed class ConsumidorKafka(
         }
     }
 
+    /// <summary>Espera hasta que el mensaje de reintento se pueda procesar, sin salir del grupo de consumo.</summary>
+    /// <remarks>
     /// Los tópicos de reintento tienen demora fija, así que el primer mensaje es el que vence antes.
     /// Se pausan las particiones y se sigue haciendo poll: esperar una hora sin poll sacaría al consumidor del grupo.
+    /// </remarks>
+    /// <param name="consumidor">Consumidor de Kafka.</param>
+    /// <param name="actual">Mensaje que se está esperando.</param>
+    /// <param name="vence">Momento a partir del cual se puede procesar.</param>
+    /// <param name="ct">Token de cancelación.</param>
     private void EsperarVencimiento(IConsumer<string, string> consumidor, ConsumeResult<string, string> actual, DateTimeOffset vence, CancellationToken ct)
     {
         if (vence <= reloj.GetUtcNow())
@@ -169,7 +212,12 @@ public sealed class ConsumidorKafka(
         }
     }
 
-    /// El procesamiento continúa la traza de quien publicó (traceparent del encabezado).
+    /// <summary>
+    /// Ejecuta el manejador dentro de una traza que continúa la de quien publicó (traceparent del encabezado).
+    /// </summary>
+    /// <param name="mensaje">Mensaje a manejar.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Una tarea que termina cuando el manejador terminó; si falla, la traza queda marcada con error.</returns>
     private async Task ManejarConTrazaAsync(MensajeKafka mensaje, CancellationToken ct)
     {
         ActivityContext.TryParse(mensaje.Encabezado(ProductorKafka.EncabezadoTraza), null, out var padre);
@@ -190,6 +238,9 @@ public sealed class ConsumidorKafka(
         }
     }
 
+    /// <summary>Convierte el mensaje de Confluent.Kafka en un <see cref="MensajeKafka"/> independiente de la librería.</summary>
+    /// <param name="registro">Mensaje leído de Kafka.</param>
+    /// <returns>El mensaje con tópico, partición, offset, clave, valor, encabezados y marca de tiempo.</returns>
     private static MensajeKafka AMensaje(ConsumeResult<string, string> registro) => new(
         registro.Topic,
         registro.Partition.Value,
@@ -201,5 +252,8 @@ public sealed class ConsumidorKafka(
             ? null
             : new DateTimeOffset(registro.Message.Timestamp.UtcDateTime, TimeSpan.Zero));
 
+    /// <summary>Lista los números de partición separados por coma, para los logs.</summary>
+    /// <param name="particiones">Particiones a listar.</param>
+    /// <returns>Por ejemplo <c>0,3,7</c>.</returns>
     private static string Listar(IEnumerable<Partition> particiones) => string.Join(",", particiones.Select(p => p.Value));
 }

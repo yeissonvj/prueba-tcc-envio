@@ -10,22 +10,35 @@ using TccEventos.Infraestructura.Resiliencia;
 
 namespace TccEventos.Notificador.Enrutamiento;
 
+/// <summary>
 /// Política de enrutamiento del notificador. NUNCA bloquea: un proveedor caído no puede frenar
 /// las notificaciones de las demás guías (al revés que el procesador, donde el orden obliga a esperar).
-///   éxito                          → listo
-///   proveedor no disponible        → siguiente etapa de reintento (1 min → 10 min → 1 h)
-///   reintentos agotados / destino
-///   rechazado / sin destino        → canal alterno (con su propia escalera) y, si no hay, DLQ
-///   ilegible / error inesperado    → DLQ
+/// </summary>
+/// <remarks>
+/// <list type="bullet">
+/// <item>éxito → listo.</item>
+/// <item>proveedor no disponible → siguiente etapa de reintento (1 min → 10 min → 1 h).</item>
+/// <item>reintentos agotados, destino rechazado o sin destino → canal alterno (con su propia escalera) y, si no hay, DLQ.</item>
+/// <item>ilegible o error inesperado → DLQ.</item>
+/// </list>
+/// </remarks>
+/// <param name="notificar">Caso de uso que envía una notificación.</param>
+/// <param name="enrutador">Publica reintentos y DLQ.</param>
+/// <param name="opciones">Escalera de reintentos.</param>
+/// <param name="logger">Registro de reintentos, canal alterno y DLQ.</param>
 public sealed class ManejadorNotificacion(
     NotificarCambioEstado notificar,
     IEnrutadorNotificaciones enrutador,
     OpcionesNotificador opciones,
     ILogger<ManejadorNotificacion> logger)
 {
+    /// <summary>Reglas de serialización web (camelCase).</summary>
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    /// Desde guias.estados.cambiados: primer intento por el canal principal.
+    /// <summary>Maneja un mensaje de guias.estados.cambiados: primer intento por el canal principal (SMS).</summary>
+    /// <param name="mensaje">Mensaje leído de Kafka.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Una tarea que termina cuando la notificación se envió, se reprogramó o fue a la DLQ.</returns>
     public async Task ManejarCambioAsync(MensajeKafka mensaje, CancellationToken ct)
     {
         var cambio = Leer<EstadoGuiaCambiadoV1>(mensaje.Valor);
@@ -38,7 +51,10 @@ public sealed class ManejadorNotificacion(
         await IntentarAsync(new NotificacionPendienteV1(cambio, CanalesV1.Sms, 0, mensaje.Marca), ct);
     }
 
-    /// Desde notificaciones.reintento.*: el ConsumidorKafka ya esperó a que venciera.
+    /// <summary>Maneja un mensaje de notificaciones.reintento.*: el ConsumidorKafka ya esperó a que venciera.</summary>
+    /// <param name="mensaje">Mensaje leído del tópico de reintento.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Una tarea que termina cuando la notificación se envió, se reprogramó o fue a la DLQ.</returns>
     public async Task ManejarReintentoAsync(MensajeKafka mensaje, CancellationToken ct)
     {
         var pendiente = Leer<NotificacionPendienteV1>(mensaje.Valor);
@@ -51,6 +67,13 @@ public sealed class ManejadorNotificacion(
         await IntentarAsync(pendiente, ct);
     }
 
+    /// <summary>
+    /// Intenta enviar la notificación por su canal y decide la siguiente etapa según el resultado:
+    /// listo, siguiente reintento, canal alterno o DLQ. Registra las métricas de notificación.
+    /// </summary>
+    /// <param name="pendiente">Notificación con su canal e intento actuales.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Una tarea que termina cuando la notificación quedó resuelta o reprogramada.</returns>
     private async Task IntentarAsync(NotificacionPendienteV1 pendiente, CancellationToken ct)
     {
         var canal = MapeadorNotificacion.CanalDesdeTexto(pendiente.Canal);
@@ -94,6 +117,12 @@ public sealed class ManejadorNotificacion(
         }
     }
 
+    /// <summary>Pasa al canal alterno (empezando su propia escalera) o, si no hay más canales, a la DLQ.</summary>
+    /// <param name="pendiente">Notificación que no se pudo enviar.</param>
+    /// <param name="canal">Canal que falló.</param>
+    /// <param name="motivo">Por qué falló.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Una tarea que termina cuando se intentó el canal alterno o se envió a la DLQ.</returns>
     private async Task CanalAlternoODlqAsync(NotificacionPendienteV1 pendiente, CanalNotificacion canal, string motivo, CancellationToken ct)
     {
         if (PoliticaNotificacion.CanalAlterno(canal) is { } alterno)
@@ -107,6 +136,11 @@ public sealed class ManejadorNotificacion(
         await EnviarADlqAsync(pendiente, motivo, ct);
     }
 
+    /// <summary>Envía la notificación a notificaciones.dlq y registra las métricas de falla.</summary>
+    /// <param name="pendiente">Notificación que no se pudo entregar.</param>
+    /// <param name="motivo">Por qué se rechaza.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Una tarea que termina cuando la DLQ confirmó.</returns>
     private async Task EnviarADlqAsync(NotificacionPendienteV1 pendiente, string motivo, CancellationToken ct)
     {
         logger.LogError("Notificación {Guia} v{Version} va a DLQ: {Motivo}", pendiente.Cambio.NumeroGuia, pendiente.Cambio.Version, motivo);
@@ -116,12 +150,19 @@ public sealed class ManejadorNotificacion(
         Telemetria.MensajesDlq.Add(1, Telemetria.Etiqueta("origen", "notificador"));
     }
 
+    /// <summary>Suma un intento de notificación a la métrica tcc.notificaciones.</summary>
+    /// <param name="canal">Canal del intento.</param>
+    /// <param name="resultado">Resultado en snake_case (enviada, reintento, fallida...).</param>
     private static void Medir(CanalNotificacion canal, string resultado) =>
         Telemetria.Notificaciones.Add(1,
             Telemetria.Etiqueta("canal", Telemetria.Texto(canal)),
             Telemetria.Etiqueta("resultado", resultado));
 
     // Publicar el reintento o la DLQ DEBE lograrse antes de avanzar el offset; si Kafka no responde, se insiste.
+    /// <summary>Ejecuta una publicación y la repite con espera creciente (hasta 30 s) hasta que funcione.</summary>
+    /// <param name="publicar">Publicación del reintento o de la DLQ.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Una tarea que termina cuando la publicación se logró.</returns>
     private async Task InsistirAsync(Func<Task> publicar, CancellationToken ct)
     {
         for (var intento = 1; ; intento++)
@@ -140,6 +181,10 @@ public sealed class ManejadorNotificacion(
         }
     }
 
+    /// <summary>Lee el JSON de un mensaje; si está vacío o mal formado devuelve <see langword="null"/>.</summary>
+    /// <typeparam name="T">Contrato esperado.</typeparam>
+    /// <param name="valor">Contenido del mensaje.</param>
+    /// <returns>El contrato leído, o <see langword="null"/> si el mensaje es ilegible.</returns>
     private static T? Leer<T>(string? valor) where T : class
     {
         if (string.IsNullOrWhiteSpace(valor))

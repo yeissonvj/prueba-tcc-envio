@@ -5,8 +5,19 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace TccEventos.Api.Seguridad;
 
+/// <summary>
+/// Seguridad de la API: autenticación JWT, autorización por alcance y límite de peticiones por cliente.
+/// </summary>
 public static class RegistroSeguridad
 {
+    /// <summary>
+    /// Registra la validación del JWT (emisor, audiencia, vigencia y solo RS256), las políticas por alcance
+    /// (eventos:escribir y guias:leer) y un cubo de fichas por cliente que responde 429 + Retry-After.
+    /// </summary>
+    /// <param name="services">Contenedor de servicios.</param>
+    /// <param name="configuracion">Configuración de la aplicación (sección Seguridad).</param>
+    /// <returns>El mismo contenedor, para encadenar llamadas.</returns>
+    /// <exception cref="InvalidOperationException">Si falta la sección Seguridad o el emisor.</exception>
     public static IServiceCollection AgregarSeguridad(this IServiceCollection services, IConfiguration configuracion)
     {
         var opciones = configuracion.GetSection("Seguridad").Get<OpcionesSeguridad>()
@@ -84,6 +95,9 @@ public static class RegistroSeguridad
         return services;
     }
 
+    /// <summary>Agrega a la tubería HTTP la autenticación, la autorización y el límite de peticiones, en ese orden.</summary>
+    /// <param name="app">Aplicación web.</param>
+    /// <returns>La misma aplicación, para encadenar llamadas.</returns>
     public static WebApplication UsarSeguridad(this WebApplication app)
     {
         app.UseAuthentication();
@@ -92,6 +106,10 @@ public static class RegistroSeguridad
         return app;
     }
 
+    /// <summary>Indica si el token trae un alcance en su claim scope (separado por espacios).</summary>
+    /// <param name="usuario">Cliente autenticado.</param>
+    /// <param name="alcance">Alcance requerido.</param>
+    /// <returns><see langword="true"/> si el token incluye el alcance.</returns>
     private static bool TieneAlcance(System.Security.Claims.ClaimsPrincipal usuario, string alcance) =>
         usuario.FindFirst(Reclamos.Alcances)?.Value
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)

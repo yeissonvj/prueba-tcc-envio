@@ -2,23 +2,42 @@ using TccEventos.Contratos.V1;
 
 namespace TccEventos.Api.Validacion;
 
-/// Valida la forma del evento en la frontera. Las reglas de negocio
-/// (transiciones, eventos tardíos) NO van aquí: las decide el procesador.
+/// <summary>
+/// Valida la forma del evento en la frontera de la API.
+/// </summary>
+/// <remarks>
+/// Las reglas de negocio (transiciones, eventos tardíos) NO van aquí: las decide el procesador.
+/// </remarks>
+/// <param name="reloj">Reloj para validar que la fecha no esté en el futuro (reemplazable en pruebas).</param>
 public class ValidadorEventoGuiaV1(TimeProvider reloj)
 {
+    /// <summary>Longitud máxima del número de guía.</summary>
     public const int LongitudMaximaGuia = 30;
+
+    /// <summary>Longitud máxima del origen.</summary>
     public const int LongitudMaximaOrigen = 30;
+
+    /// <summary>Longitud máxima de la descripción de la novedad.</summary>
     public const int LongitudMaximaNovedad = 500;
 
     // Tolerancia por relojes desfasados en dispositivos de mensajeros.
+    /// <summary>Cuánto puede estar en el futuro la fecha del evento sin rechazarse.</summary>
     public static readonly TimeSpan ToleranciaFuturo = TimeSpan.FromMinutes(5);
 
-    /// Misma regla para la ingesta y la consulta: un número que no puede recibirse tampoco se consulta.
+    /// <summary>
+    /// Indica si un número de guía es válido: letras y números ASCII, máximo 30 caracteres.
+    /// </summary>
+    /// <remarks>Misma regla para la ingesta y la consulta: un número que no puede recibirse tampoco se consulta.</remarks>
+    /// <param name="numeroGuia">Número a revisar.</param>
+    /// <returns><see langword="true"/> si es válido.</returns>
     public static bool EsNumeroGuiaValido(string? numeroGuia) =>
         !string.IsNullOrWhiteSpace(numeroGuia)
         && numeroGuia.Length <= LongitudMaximaGuia
         && numeroGuia.All(char.IsAsciiLetterOrDigit);
 
+    /// <summary>Valida todos los campos del evento y reporta todos los errores a la vez.</summary>
+    /// <param name="evento">Evento recibido.</param>
+    /// <returns>Errores por campo (vacío si el evento es válido), en el formato de ValidationProblem.</returns>
     public Dictionary<string, string[]> Validar(EventoGuiaV1 evento)
     {
         var errores = new Dictionary<string, string[]>();

@@ -6,8 +6,15 @@ using TccEventos.Infraestructura.Consultas;
 
 namespace TccEventos.Api.Endpoints;
 
+/// <summary>Endpoint de consulta: GET /api/v1/guias/{numeroGuia}.</summary>
 public static class GuiasEndpoints
 {
+    /// <summary>
+    /// Publica la ruta con su autorización (alcance guias:leer), su límite por cliente
+    /// y la descripción de sus respuestas para OpenAPI.
+    /// </summary>
+    /// <param name="app">Constructor de rutas.</param>
+    /// <returns>El mismo constructor, para encadenar llamadas.</returns>
     public static IEndpointRouteBuilder MapGuias(this IEndpointRouteBuilder app)
     {
         app.MapGet("/api/v1/guias/{numeroGuia}", ObtenerAsync)
@@ -30,6 +37,14 @@ public static class GuiasEndpoints
         return app;
     }
 
+    /// <summary>
+    /// Devuelve el estado actual y el historial de la guía, sin permitir que se guarde en caché.
+    /// </summary>
+    /// <param name="numeroGuia">Número de la guía (de la ruta).</param>
+    /// <param name="consulta">Lado de lectura (CQRS ligero).</param>
+    /// <param name="http">Contexto HTTP, para el encabezado Cache-Control.</param>
+    /// <param name="ct">Token de cancelación de la petición.</param>
+    /// <returns>200 con la guía, 400 si el número está mal formado (sin consultar la base) o 404 si no existe.</returns>
     private static async Task<Results<Ok<GuiaV1>, ValidationProblem, ProblemHttpResult>> ObtenerAsync(
         string numeroGuia,
         IConsultaGuias consulta,

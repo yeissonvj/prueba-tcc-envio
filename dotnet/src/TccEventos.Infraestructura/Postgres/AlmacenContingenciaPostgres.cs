@@ -9,12 +9,20 @@ using TccEventos.Infraestructura.Observabilidad;
 
 namespace TccEventos.Infraestructura.Postgres;
 
-/// Adaptador: contingencia en PostgreSQL (tabla contingencia_eventos, migración V1).
-/// SQL parametrizado siempre: los datos del evento nunca se concatenan en la consulta.
+/// <summary>
+/// Adaptador de <see cref="IAlmacenContingencia"/>: contingencia en PostgreSQL (tabla contingencia_eventos, migración V1).
+/// </summary>
+/// <remarks>SQL parametrizado siempre: los datos del evento nunca se concatenan en la consulta.</remarks>
+/// <param name="baseDatos">Fuente de conexiones a PostgreSQL.</param>
 public sealed class AlmacenContingenciaPostgres(NpgsqlDataSource baseDatos) : IAlmacenContingencia
 {
+    /// <summary>Reglas de serialización web (camelCase) del evento guardado.</summary>
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
+    /// <summary>Guarda el evento en contingencia_eventos; si ya estaba, no hace nada (idempotente).</summary>
+    /// <param name="evento">Evento que Kafka no confirmó.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Una tarea que termina cuando el evento quedó guardado.</returns>
     public async Task GuardarAsync(EventoGuia evento, CancellationToken ct)
     {
         await using var comando = baseDatos.CreateCommand("""
@@ -34,6 +42,14 @@ public sealed class AlmacenContingenciaPostgres(NpgsqlDataSource baseDatos) : IA
         Telemetria.EventosEnContingencia.Add(1);
     }
 
+    /// <summary>
+    /// Toma un lote de pendientes en orden de llegada (con SKIP LOCKED para convivir con otras instancias),
+    /// los publica y borra los que se publicaron, todo en una transacción.
+    /// </summary>
+    /// <param name="publicar">Función que publica cada evento en Kafka.</param>
+    /// <param name="maximo">Tamaño máximo del lote.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>Cuántos eventos se reenviaron; los que fallan quedan para el siguiente ciclo.</returns>
     public async Task<int> ReenviarPendientesAsync(
         Func<EventoGuia, CancellationToken, Task> publicar, int maximo, CancellationToken ct)
     {
@@ -92,6 +108,11 @@ public sealed class AlmacenContingenciaPostgres(NpgsqlDataSource baseDatos) : IA
 
     // Un publicador que lanza de forma síncrona (en vez de devolver una Task fallida) abortaría el lote
     // antes del DELETE, y los ya publicados se reenviarían en el siguiente ciclo.
+    /// <summary>Inicia la publicación de un evento convirtiendo cualquier excepción síncrona en una tarea fallida.</summary>
+    /// <param name="publicar">Función que publica.</param>
+    /// <param name="evento">Evento a publicar.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>La tarea de publicación (fallida si el publicador lanzó de inmediato).</returns>
     private static Task Iniciar(Func<EventoGuia, CancellationToken, Task> publicar, EventoGuia evento, CancellationToken ct)
     {
         try

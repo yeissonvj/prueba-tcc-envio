@@ -6,9 +6,17 @@ using TccEventos.Procesador.Consumo;
 
 namespace TccEventos.Procesador.Configuracion;
 
-/// Raíz de composición del procesador de estado.
+/// <summary>Raíz de composición del procesador de estado.</summary>
 public static class RegistroServicios
 {
+    /// <summary>
+    /// Registra el repositorio, el caso de uso, la DLQ, el consumidor de guias.eventos.recibidos
+    /// (particiones en paralelo) y el relay de la bandeja de salida.
+    /// </summary>
+    /// <param name="services">Contenedor de servicios.</param>
+    /// <param name="configuracion">Configuración (secciones Kafka, Postgres y Consumidor).</param>
+    /// <returns>El mismo contenedor, para encadenar llamadas.</returns>
+    /// <exception cref="InvalidOperationException">Si falta la configuración de Kafka o PostgreSQL.</exception>
     public static IServiceCollection AgregarProcesador(this IServiceCollection services, IConfiguration configuracion)
     {
         var kafka = configuracion.GetSection("Kafka").Get<OpcionesKafka>()

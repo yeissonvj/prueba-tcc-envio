@@ -10,8 +10,15 @@ using TccEventos.Infraestructura.Observabilidad;
 
 namespace TccEventos.Api.Endpoints;
 
+/// <summary>Endpoint de ingesta: POST /api/v1/eventos-guia.</summary>
 public static class EventosGuiaEndpoints
 {
+    /// <summary>
+    /// Publica la ruta con su autorización (alcance eventos:escribir), su límite por cliente
+    /// y la descripción de todas sus respuestas para OpenAPI.
+    /// </summary>
+    /// <param name="app">Constructor de rutas.</param>
+    /// <returns>El mismo constructor, para encadenar llamadas.</returns>
     public static IEndpointRouteBuilder MapEventosGuia(this IEndpointRouteBuilder app)
     {
         app.MapPost("/api/v1/eventos-guia", RecibirAsync)
@@ -40,6 +47,20 @@ public static class EventosGuiaEndpoints
         return app;
     }
 
+    /// <summary>
+    /// Recibe un evento: valida el contrato, verifica que el cliente pueda reportar ese origen
+    /// y lo entrega al caso de uso <see cref="RecibirEvento"/>.
+    /// </summary>
+    /// <param name="evento">Cuerpo de la petición.</param>
+    /// <param name="usuario">Cliente autenticado (claims del token).</param>
+    /// <param name="validador">Validador del contrato V1.</param>
+    /// <param name="autorizadorOrigen">Regla anti-suplantación por origen.</param>
+    /// <param name="recibirEvento">Caso de uso de recepción.</param>
+    /// <param name="ct">Token de cancelación de la petición.</param>
+    /// <returns>202 (aceptado, con Location), 200 (duplicado), 400 (contrato) o 403 (origen no permitido).</returns>
+    /// <exception cref="Aplicacion.Puertos.PublicacionFallidaException">
+    /// Nada quedó durable; el manejador de errores la convierte en 503.
+    /// </exception>
     private static async Task<Results<Accepted<RespuestaRecepcionV1>, Ok<RespuestaRecepcionV1>, ValidationProblem, ProblemHttpResult>> RecibirAsync(
         EventoGuiaV1 evento,
         ClaimsPrincipal usuario,
